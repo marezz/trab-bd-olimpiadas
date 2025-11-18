@@ -4,7 +4,7 @@ from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente (opcional, mas recomendado)
+# Carregar variáveis de ambiente
 load_dotenv()
 
 class OlimpiadasCSVToMySQL:
@@ -21,7 +21,6 @@ class OlimpiadasCSVToMySQL:
     def conectar(self):
         """Estabelece conexão com o banco de dados"""
         try:
-            # Primeira conexão sem especificar database
             self.connection = mysql.connector.connect(
                 host=self.host,
                 user=self.user,
@@ -60,7 +59,6 @@ class OlimpiadasCSVToMySQL:
         try:
             cursor = self.connection.cursor()
             
-            # SQL de criação das tabelas
             tabelas = [
                 """
                 CREATE TABLE IF NOT EXISTS Pais (
@@ -112,7 +110,7 @@ class OlimpiadasCSVToMySQL:
                 CREATE TABLE IF NOT EXISTS Compete (
                     id_atleta INT,
                     id_evento INT,
-                    medalha ENUM('Ouro', 'Prata', 'Bronze', 'Sem Medalha', 'Gold', 'Silver', 'Bronze', 'NA') DEFAULT 'Sem Medalha',
+                    medalha ENUM('Ouro', 'Prata', 'Bronze', 'Sem Medalha', 'Gold', 'Silver', 'NA') DEFAULT 'Sem Medalha',
                     PRIMARY KEY (id_atleta, id_evento),
                     FOREIGN KEY (id_atleta) REFERENCES Atleta(id_atleta)
                         ON DELETE CASCADE
@@ -137,45 +135,18 @@ class OlimpiadasCSVToMySQL:
     def processar_csv_unico(self, csv_path, batch_size=500, ano_inicial=2006, ano_final=2016):
         """
         Processa o arquivo olimpiadasfiltrado.csv com todas as informações
-        
-        Args:
-            csv_path: Caminho do arquivo CSV
-            batch_size: Tamanho do lote para commit
-            ano_inicial: Ano inicial do filtro (padrão: 2006)
-            ano_final: Ano final do filtro (padrão: 2016)
-        
-        Colunas do CSV:
-        - id: ID original do atleta
-        - nome: Nome do atleta
-        - sexo: Sexo (M/F)
-        - idade: Idade do atleta
-        - altura: Altura em cm
-        - peso: Peso em kg
-        - equipe: Nome do país/equipe
-        - sigla: Sigla do país (NOC)
-        - jogos: Nome completo dos jogos (ex: "2016 Summer")
-        - ano: Ano da olimpíada
-        - temporada: Verão/Inverno (Summer/Winter)
-        - cidade: Cidade sede
-        - esporte: Esporte praticado
-        - evento: Modalidade/evento específico
-        - medalha: Medalha conquistada (Gold/Silver/Bronze/NA)
         """
         try:
             print(f"\n📂 Carregando CSV: {csv_path}")
             df = pd.read_csv(csv_path)
             
-            # Normalizar nomes das colunas - remover espaços e deixar minúsculas
             df.columns = df.columns.str.strip().str.lower()
-            
             print(f"✓ CSV carregado: {len(df)} registros")
             
-            # Filtrar por ano
             df = df[(df['ano'] >= ano_inicial) & (df['ano'] <= ano_final)]
             print(f"✓ Após filtro ({ano_inicial}-{ano_final}): {len(df)} registros")
             print(f"📊 Colunas encontradas: {', '.join(df.columns)}\n")
             
-            # Verificar se as colunas necessárias existem
             colunas_necessarias = ['nome', 'equipe', 'sigla', 'ano', 'temporada', 'cidade', 'esporte', 'evento', 'medalha', 'peso', 'altura', 'idade', 'sexo']
             colunas_faltando = [col for col in colunas_necessarias if col not in df.columns]
             
@@ -184,12 +155,9 @@ class OlimpiadasCSVToMySQL:
                 print(f"📋 Colunas disponíveis: {', '.join(df.columns)}")
                 return
             
-            # Mapeamento flexível de colunas (ajuste conforme necessário)
             col_map = self._mapear_colunas(df.columns)
-            
             cursor = self.connection.cursor()
             
-            # Dicionários para cache de IDs
             paises_cache = {}
             atletas_cache = {}
             eventos_cache = {}
@@ -202,7 +170,7 @@ class OlimpiadasCSVToMySQL:
             
             for idx, row in df.iterrows():
                 try:
-                    # 1. PAÍS
+                    # PAÍS
                     pais_nome = str(row[col_map['pais']]).strip()
                     pais_sigla = str(row[col_map['sigla']]).strip().upper()
                     
@@ -213,7 +181,7 @@ class OlimpiadasCSVToMySQL:
                         )
                         paises_cache[pais_sigla] = True
                     
-                    # 2. OLIMPÍADA
+                    # OLIMPÍADA
                     ano = int(row[col_map['ano']])
                     estacao = str(row[col_map['estacao']]).strip()
                     sede = str(row[col_map['sede']]).strip()
@@ -225,11 +193,23 @@ class OlimpiadasCSVToMySQL:
                         )
                         olimpiadas_cache.add(ano)
                     
-                    # 3. ATLETA
+                    # ATLETA
                     atleta_nome = str(row[col_map['nome']]).strip()
                     sexo = str(row[col_map['sexo']]).strip()[0].upper() if pd.notna(row[col_map['sexo']]) else None
                     peso = None if pd.isna(row[col_map['peso']]) else float(row[col_map['peso']])
-                    altura = None if pd.isna(row[col_map['altura']]) else float(row[col_map['altura']])
+                    
+                    # CORREÇÃO: Converter altura de cm para metros
+                    altura_raw = row[col_map['altura']]
+                    if pd.isna(altura_raw):
+                        altura = None
+                    else:
+                        altura_cm = float(altura_raw)
+                        # Se altura >= 3, está em cm, converte para metros
+                        if altura_cm >= 3:
+                            altura = round(altura_cm / 100, 2)
+                        else:
+                            altura = altura_cm  # Já está em metros
+                    
                     idade = None if pd.isna(row[col_map['idade']]) else int(row[col_map['idade']])
                     
                     chave_atleta = (atleta_nome, pais_sigla)
@@ -245,7 +225,7 @@ class OlimpiadasCSVToMySQL:
                     
                     id_atleta = atletas_cache[chave_atleta]
                     
-                    # 4. EVENTO
+                    # EVENTO
                     esporte = str(row[col_map['esporte']]).strip()
                     modalidade = str(row[col_map['modalidade']]).strip()
                     
@@ -270,15 +250,14 @@ class OlimpiadasCSVToMySQL:
                     if not id_evento:
                         continue
                     
-                    # 5. COMPETE (Relacionamento)
+                    # COMPETE
                     medalha_raw = str(row[col_map['medalha']]).strip()
                     
-                    # Normalizar medalha
                     medalha_map = {
                         'Gold': 'Ouro', 'Ouro': 'Ouro',
                         'Silver': 'Prata', 'Prata': 'Prata',
                         'Bronze': 'Bronze',
-                        'NA': 'null', 'nan': 'null', 'None': 'null'
+                        'NA': 'Sem Medalha', 'nan': 'Sem Medalha', 'None': 'Sem Medalha'
                     }
                     medalha = medalha_map.get(medalha_raw, 'Sem Medalha')
                     
@@ -288,7 +267,6 @@ class OlimpiadasCSVToMySQL:
                         (id_atleta, id_evento, medalha)
                     )
                     
-                    # Commit em lotes
                     if (idx + 1) % batch_size == 0:
                         self.connection.commit()
                         progresso = ((idx + 1) / total) * 100
@@ -296,10 +274,9 @@ class OlimpiadasCSVToMySQL:
                 
                 except Exception as e:
                     erros += 1
-                    if erros <= 5:  # Mostrar apenas os primeiros 5 erros
+                    if erros <= 5:
                         print(f"   ⚠ Erro na linha {idx + 1}: {str(e)[:100]}")
             
-            # Commit final
             self.connection.commit()
             cursor.close()
             
@@ -319,40 +296,22 @@ class OlimpiadasCSVToMySQL:
             self.connection.rollback()
     
     def _mapear_colunas(self, colunas):
-        """
-        Mapeia as colunas do CSV olimpiadasfiltrado.csv
-        Colunas: id, nome, sexo, idade, altura, peso, equipe, sigla, jogos, ano, temporada, cidade, esporte, evento, medalha
-        """
-        # Colunas já devem estar em lowercase devido ao processamento anterior
-        mapeamento = {}
-        
-        # Mapeamento direto
-        if 'nome' in colunas:
-            mapeamento['nome'] = 'nome'
-        if 'equipe' in colunas:
-            mapeamento['pais'] = 'equipe'
-        if 'sigla' in colunas:
-            mapeamento['sigla'] = 'sigla'
-        if 'ano' in colunas:
-            mapeamento['ano'] = 'ano'
-        if 'temporada' in colunas:
-            mapeamento['estacao'] = 'temporada'
-        if 'cidade' in colunas:
-            mapeamento['sede'] = 'cidade'
-        if 'esporte' in colunas:
-            mapeamento['esporte'] = 'esporte'
-        if 'evento' in colunas:
-            mapeamento['modalidade'] = 'evento'
-        if 'medalha' in colunas:
-            mapeamento['medalha'] = 'medalha'
-        if 'peso' in colunas:
-            mapeamento['peso'] = 'peso'
-        if 'altura' in colunas:
-            mapeamento['altura'] = 'altura'
-        if 'idade' in colunas:
-            mapeamento['idade'] = 'idade'
-        if 'sexo' in colunas:
-            mapeamento['sexo'] = 'sexo'
+        """Mapeia as colunas do CSV"""
+        mapeamento = {
+            'nome': 'nome',
+            'pais': 'equipe',
+            'sigla': 'sigla',
+            'ano': 'ano',
+            'estacao': 'temporada',
+            'sede': 'cidade',
+            'esporte': 'esporte',
+            'modalidade': 'evento',
+            'medalha': 'medalha',
+            'peso': 'peso',
+            'altura': 'altura',
+            'idade': 'idade',
+            'sexo': 'sexo'
+        }
         
         print("🔍 Mapeamento de colunas:")
         for chave, valor in mapeamento.items():
@@ -368,21 +327,18 @@ class OlimpiadasCSVToMySQL:
             print("✓ Conexão MySQL fechada")
 
 
-# ============ EXEMPLO DE USO ============
-
 if __name__ == "__main__":
     # Configurações do banco de dados
     DB_CONFIG = {
-        'host': 'localhost',
-        'database': 'olimpiadas_db',
-        'user': 'root',
-        'password': ''
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'database': os.getenv('DB_NAME', 'olimpiadas_db'),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', '')
     }
     
-    # Caminho do CSV único
-    CSV_FILE = 'C:/Users/marce/Documents/trabalhos/bd/olimpiadasfiltrado.csv'
+    # Caminho do CSV
+    CSV_FILE = 'olimpiadasfiltrado.csv'
     
-    # Executar importação
     print("=" * 60)
     print("IMPORTAÇÃO DE DADOS - SISTEMA OLIMPÍADAS")
     print("=" * 60)
