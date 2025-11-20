@@ -132,7 +132,7 @@ class OlimpiadasCSVToMySQL:
         except Error as e:
             print(f"✗ Erro ao criar schema: {e}")
     
-    def processar_csv_unico(self, csv_path, batch_size=500, ano_inicial=2006, ano_final=2016):
+    def processar_csv_unico(self, csv_path, batch_size=500, ano_inicial=1896, ano_final=2016):
         """
         Processa o arquivo olimpiadasfiltrado.csv com todas as informações
         """
@@ -354,6 +354,6 @@ if __name__ == "__main__":
         db.criar_schema()
         
         print("\n[3/3] Processando arquivo CSV único...")
-        db.processar_csv_unico(CSV_FILE, batch_size=500, ano_inicial=2006, ano_final=2016)
+        db.processar_csv_unico(CSV_FILE, batch_size=500, ano_inicial=1896, ano_final=2016)
         
         db.desconectar()
