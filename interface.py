@@ -505,55 +505,6 @@ def main():
                             st.rerun()
                 else:
                     st.warning("Nenhum evento disponível.")
-
-            st.title("🥇 10 atletas com mais medalhas de cada evento """)
-     
-            modalidades = pd.read_sql("""
-                SELECT DISTINCT modalidade 
-                FROM Evento
-                ORDER BY modalidade;
-            """, conexao)["modalidade"].tolist()
-
-            escolhida = st.selectbox("Selecione a modalidade:", modalidades)
-    
-            query = f"""
-                    SELECT 
-                    A.nome,
-                    COUNT(*) AS total_medalhas
-                FROM Atleta A
-                JOIN Compete C ON C.id_atleta = A.id_atleta
-                JOIN Evento E ON E.id_evento = C.id_evento
-                WHERE C.medalha <> "Sem Medalha"
-                AND E.modalidade = %s
-                GROUP BY A.id_atleta, A.nome
-                ORDER BY total_medalhas DESC;"""
-
-
-            df = pd.read_sql(query, conexao, params=[escolhida])
-            st.dataframe(df)
-
-            st.title("🥇 10 Países com mais medalhas de cada evento """)
-
-            modalidades_pais = pd.read_sql("""
-                SELECT DISTINCT modalidade 
-                FROM Evento
-                ORDER BY modalidade;
-            """, conexao)["modalidade"].tolist()
-
-            escolhida_pais = st.selectbox("Selecione a modalidade:", modalidades)
-
-            query = f"""
-                    SELECT 
-                    A.nome,
-                    COUNT(*) AS total_medalhas
-                FROM Atleta A
-                JOIN Compete C ON C.id_atleta = A.id_atleta
-                JOIN Evento E ON E.id_evento = C.id_evento
-                WHERE C.medalha <> "Sem Medalha"
-                AND E.modalidade = %s
-                GROUP BY A.id_atleta, A.nome
-                ORDER BY total_medalhas DESC;"""
-
         
         # ========== COMPETE ==========
         elif tabela == "Compete":
