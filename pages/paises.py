@@ -3,7 +3,7 @@ import pandas as pd
 from db import get_connection
 
 st.set_page_config(page_title="Países - Olimpíadas", layout="wide")
-st.title("🌍 Setor: Países — Insights Históricos das Olimpíadas")
+st.title("Países")
 
 # Conexão
 try:
