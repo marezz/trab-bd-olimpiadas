@@ -92,5 +92,3 @@ GROUP BY sexo;
 
 df4 = pd.read_sql(q4, conn)
 st.dataframe(df4, use_container_width=True)
-
-st.caption("Página de Olimpíadas criada seguindo o estilo das demais seções.")
