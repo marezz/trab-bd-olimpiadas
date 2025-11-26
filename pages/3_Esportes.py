@@ -3,8 +3,9 @@ import pandas as pd
 import altair as alt
 from db import get_connection
 
-st.set_page_config(page_title="Análise de Eventos", page_icon="📅", layout="wide")
-st.title("Eventos")
+
+st.set_page_config(page_title="Análise dos Esportes", page_icon="📅", layout="wide")
+st.title("Esportes")
 
 conn = get_connection()
 
@@ -57,7 +58,7 @@ LIMIT 10;
 df_atletas = pd.read_sql(q_atletas, conn, params=[esporte_sel])
 
 def render_atletas():
-    st.dataframe(df_atletas, use_container_width=True)
+    st.dataframe(df_atletas, use_container_width=True, hide_index=True)
 
 bloco(render_atletas, q_atletas)
 
@@ -120,7 +121,7 @@ chart = (
 )
 
 def render_paises():
-    st.dataframe(df_pizza[['País', "Total_Medalhas"]], use_container_width=True)
+    st.dataframe(df_pizza[['País', "Total_Medalhas"]], use_container_width=True, hide_index=True)
 
 bloco(render_paises, query)
 st.altair_chart(chart, use_container_width=True)
@@ -131,55 +132,56 @@ st.subheader("Esportes com mais países competindo")
 
 q_comp = """
 SELECT 
-    E.esporte,
-    COUNT(DISTINCT A.sigla_pais) AS total_paises 
+    E.esporte as Esporte,
+    COUNT(DISTINCT A.sigla_pais) AS Total_Paises 
 FROM Evento E 
 JOIN Compete C ON C.id_evento = E.id_evento 
 JOIN Atleta A ON A.id_atleta = C.id_atleta 
-GROUP BY E.esporte 
-ORDER BY total_paises DESC
+GROUP BY E.Esporte 
+ORDER BY Total_Paises DESC
 LIMIT 10;
 """
 
 df_comp = pd.read_sql(q_comp, conn)
 
 def render_comp():
-    st.dataframe(df_comp, use_container_width=True)
-    chart = (
-        alt.Chart(df_comp.sort_values("total_paises", ascending=False))
+    st.dataframe(df_comp, use_container_width=True, hide_index=True)
+
+bloco(render_comp, q_comp)
+chart = (
+        alt.Chart(df_comp.sort_values("Total_Paises", ascending=False))
         .mark_bar()
         .encode(
-            x=alt.X("esporte:N", sort=None),
-            y="total_paises:Q"
+            x=alt.X("Esporte:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+            y="Total_Paises:Q"
         )
         .properties(height=400)
     )
-    st.altair_chart(chart, use_container_width=True)
 
-bloco(render_comp, q_comp)
+st.altair_chart(chart, use_container_width=True)
 
 
 # -------------------- 4. Distribuição por sexo --------------------
 st.subheader("Distribuição de participantes por sexo")
-esporte_sexo = st.selectbox("Esporte:", esportes, key="sexo")
+esporte_sexo = st.selectbox("Esporte:", esportes, key="Sexo")
 
 q_sexo = """
-SELECT A.sexo, COUNT(*) AS total
+SELECT A.sexo as Sexo, COUNT(*) AS Total
 FROM Atleta A
 JOIN Compete C ON C.id_atleta = A.id_atleta
 JOIN Evento E ON E.id_evento = C.id_evento
 WHERE E.esporte = %s
-GROUP BY A.sexo;
+GROUP BY A.Sexo;
 """
 
 df_sexo = pd.read_sql(q_sexo, conn, params=[esporte_sexo])
 
 def render_sexo():
-    st.dataframe(df_sexo, use_container_width=True)
+    st.dataframe(df_sexo, use_container_width=True, hide_index=True)
     pie = (
         alt.Chart(df_sexo)
         .mark_arc()
-        .encode(theta="total:Q", color="sexo:N")
+        .encode(theta="Total:Q", color="Sexo:N")
         .properties(height=400)
     )
     st.altair_chart(pie, use_container_width=True)
@@ -201,7 +203,7 @@ ORDER BY modalidade;
 df_mod = pd.read_sql(q_mod, conn, params=[esporte_mod])
 
 def render_mod():
-    st.dataframe(df_mod, use_container_width=True)
+    st.dataframe(df_mod, use_container_width=True, hide_index=True)
 
 bloco(render_mod, q_mod)
 
@@ -224,7 +226,7 @@ WHERE E.esporte = %s;
 df_media = pd.read_sql(q_media, conn, params=[esporte_media])
 
 def render_media():
-    st.dataframe(df_media, use_container_width=True)
+    st.dataframe(df_media, use_container_width=True, hide_index=True)
 
 bloco(render_media, q_media)
 
