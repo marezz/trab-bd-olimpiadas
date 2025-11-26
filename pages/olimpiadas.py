@@ -193,16 +193,19 @@ if not df_paises_ano.empty:
     max_row = df_paises_ano.loc[df_paises_ano['Paises_Participantes'].idxmax()]
     st.info(f"Recorde de diversidade: **{int(max_row['Paises_Participantes'])} países** em {int(max_row['Ano'])}.")
 
-    st.subheader(f" Países sem medalhas — {ano_selecionado}")
-    q_paises_sem_medalha_com_outer_join = """
+st.subheader(f"Países sem medalhas — {ano_selecionado}")
+
+q_paises_sem_medalha_com_outer_join = """
 SELECT 
     P.nome AS Pais
 FROM (
+    -- Países com pelo menos 1 atleta nesta edição
     SELECT DISTINCT A.sigla_pais
     FROM Atleta A
     JOIN Compete C ON C.id_atleta = A.id_atleta
     JOIN Evento E ON E.id_evento = C.id_evento
     WHERE E.ano_olimpiada = %s
+      AND A.sigla_pais IS NOT NULL
 ) AS Participantes
 JOIN Pais P ON P.sigla = Participantes.sigla_pais
 
@@ -213,20 +216,30 @@ LEFT JOIN (
     JOIN Evento E ON E.id_evento = C.id_evento
     WHERE E.ano_olimpiada = %s
       AND C.medalha IS NOT NULL
+      AND A.sigla_pais IS NOT NULL
 ) AS Medalhistas
 ON Participantes.sigla_pais = Medalhistas.sigla_pais
+
 WHERE Medalhistas.sigla_pais IS NULL
 
 ORDER BY P.nome;
 """
 
-df_sem_medalha = pd.read_sql(q_paises_sem_medalha_com_outer_join, conn, params=[ano_selecionado, ano_selecionado])
-
-if df_sem_medalha.empty:
-    st.success("Todos os países participantes conquistaram pelo menos uma medalha.")
-else:
-    st.warning(f"{len(df_sem_medalha)} países participaram, mas não ganharam medalhas:")
-    st.dataframe(df_sem_medalha, use_container_width=True)
+try:
+    df_sem_medalha = pd.read_sql(
+        q_paises_sem_medalha_com_outer_join,
+        conn,
+        params=[ano_selecionado, ano_selecionado]
+    )
+    
+    if df_sem_medalha.empty:
+        st.success("Todos os países participantes conquistaram pelo menos uma medalha.")
+    else:
+        st.warning(f"{len(df_sem_medalha)} países participaram, mas não ganharam medalhas:")
+        st.dataframe(df_sem_medalha, use_container_width=True)
+except Exception as e:
+    st.error(f"Erro ao carregar países sem medalha: {e}")
+    st.code(q_paises_sem_medalha_com_outer_join)
 
 with st.expander("Outras análises (todas as edições)"):
     
