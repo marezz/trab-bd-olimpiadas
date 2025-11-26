@@ -128,4 +128,117 @@ ORDER BY Medalhas_por_Atleta DESC;
 df5 = pd.read_sql(q5, conn)
 st.dataframe(df5, use_container_width=True)
 
-st.caption("Interface atualizada com seletores independentes e nomes completos dos países.")
+# ----------------------------
+# 6) Evolução histórica de medalhas do país
+# ----------------------------
+st.subheader("📈 Evolução histórica das medalhas do país")
+
+pais_evolucao = st.selectbox(
+    "Selecione o país:",
+    options=paises['sigla'],
+    format_func=nome_do_pais,
+    key="evolucao_selector"
+)
+
+q6 = """
+SELECT
+    O.ano AS Ano,
+    (
+        SELECT COUNT(*)
+        FROM Compete C2
+        JOIN Atleta A2 ON A2.id_atleta = C2.id_atleta
+        JOIN Evento E2 ON E2.id_evento = C2.id_evento
+        WHERE A2.sigla_pais = %s
+          AND C2.medalha IN ('Ouro','Prata','Bronze')
+          AND E2.ano_olimpiada = O.ano
+    ) AS Medalhas
+FROM Olimpiada O
+ORDER BY O.ano;
+"""
+
+df6 = pd.read_sql(q6, conn, params=[pais_evolucao])
+st.line_chart(df6.set_index("Ano"))
+st.dataframe(df6, use_container_width=True)
+
+# ----------------------------
+# 7) Medalhas do país vs média global
+# ----------------------------
+st.subheader("🌎 Medalhas do país vs média global por edição")
+
+pais_comp = st.selectbox(
+    "Selecione o país:",
+    options=paises['sigla'],
+    format_func=nome_do_pais,
+    key="comparacao_selector"
+)
+
+q7 = """
+WITH medalhas AS (
+    SELECT
+        O.ano,
+        A.sigla_pais,
+        COUNT(*) AS Medalhas
+    FROM Olimpiada O
+    LEFT JOIN Evento E ON E.ano_olimpiada = O.ano
+    LEFT JOIN Compete C ON C.id_evento = E.id_evento
+    LEFT JOIN Atleta A ON A.id_atleta = C.id_atleta
+    WHERE C.medalha IN ('Ouro','Prata','Bronze')
+    GROUP BY O.ano, A.sigla_pais
+),
+medias AS (
+    SELECT
+        ano,
+        AVG(Medalhas) AS Media_Global
+    FROM medalhas
+    GROUP BY ano
+)
+SELECT
+    m.ano AS Ano,
+    COALESCE(
+        (SELECT Medalhas FROM medalhas WHERE ano = m.ano AND sigla_pais = %s),
+        0
+    ) AS Medalhas_Pais,
+    medias.Media_Global
+FROM medias
+JOIN medalhas m ON m.ano = medias.ano
+GROUP BY Ano
+ORDER BY Ano;
+
+"""
+
+df7 = pd.read_sql(q7, conn, params=[pais_comp])
+st.dataframe(df7, use_container_width=True)
+
+# ----------------------------
+# 6) Países que estrearam no mesmo ano
+# ----------------------------
+st.subheader("🎌 Países que estrearam no mesmo ano do país selecionado")
+
+pais_estreia = st.selectbox(
+    "Selecione o país:",
+    options=paises['sigla'],
+    format_func=nome_do_pais,
+    key="estreia_selector"
+)
+
+q6 = """
+SELECT P2.nome AS Pais, MIN(O2.ano) AS Ano_Estreia
+FROM Pais P2
+JOIN Atleta A2 ON A2.sigla_pais = P2.sigla
+JOIN Compete C2 ON C2.id_atleta = A2.id_atleta
+JOIN Evento E2 ON E2.id_evento = C2.id_evento
+JOIN Olimpiada O2 ON O2.ano = E2.ano_olimpiada
+GROUP BY P2.nome
+HAVING Ano_Estreia = (
+    SELECT MIN(O.ano)
+    FROM Atleta A
+    JOIN Compete C ON C.id_atleta = A.id_atleta
+    JOIN Evento E ON E.id_evento = C.id_evento
+    JOIN Olimpiada O ON O.ano = E.ano_olimpiada
+    WHERE A.sigla_pais = %s
+)
+ORDER BY P2.nome;
+"""
+
+df6 = pd.read_sql(q6, conn, params=[pais_estreia])
+st.dataframe(df6, use_container_width=True)
