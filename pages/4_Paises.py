@@ -72,61 +72,6 @@ ORDER BY Total_Medalhas DESC;
 df2 = pd.read_sql(q2, conn, params=[pais_eventos])
 st.dataframe(df2, use_container_width=True)
 
-# ----------------------------
-# 3) PRIMEIRA PARTICIPAÇÃO POR PAÍS
-# ----------------------------
-st.subheader("Ano da primeira participação por país")
-
-q3 = """
-SELECT P.nome AS Pais, MIN(O.ano) AS Ano_Primeira_Participacao
-FROM Pais P
-JOIN Atleta A ON A.sigla_pais = P.sigla
-JOIN Compete C ON C.id_atleta = A.id_atleta
-JOIN Evento E ON E.id_evento = C.id_evento
-JOIN Olimpiada O ON O.ano = E.ano_olimpiada
-GROUP BY P.nome
-ORDER BY Ano_Primeira_Participacao;
-"""
-df3 = pd.read_sql(q3, conn)
-st.dataframe(df3, use_container_width=True)
-
-# ----------------------------
-# 4) MAIS ATLETAS INSCRITOS
-# ----------------------------
-st.subheader("Países com maior número de atletas inscritos")
-
-q4 = """
-SELECT P.nome AS Pais, COUNT(*) AS Total_Atletas
-FROM Atleta A
-JOIN Pais P ON P.sigla = A.sigla_pais
-GROUP BY P.nome
-ORDER BY Total_Atletas DESC;
-"""
-df4 = pd.read_sql(q4, conn)
-st.dataframe(df4, use_container_width=True)
-
-# ----------------------------
-# 5) PROPORÇÃO DE MEDALHAS POR ATLETA
-# ----------------------------
-st.subheader("Proporção de medalhas por atleta")
-
-q5 = """
-SELECT 
-    P.nome AS Pais,
-    COUNT(CASE WHEN C.medalha IN ('Ouro','Prata','Bronze') THEN 1 END) AS Total_Medalhas,
-    COUNT(DISTINCT A.id_atleta) AS Total_Atletas,
-    ROUND(
-        COUNT(CASE WHEN C.medalha IN ('Ouro','Prata','Bronze') THEN 1 END) /
-        NULLIF(COUNT(DISTINCT A.id_atleta), 0), 4
-    ) AS Medalhas_por_Atleta
-FROM Atleta A
-JOIN Pais P ON P.sigla = A.sigla_pais
-LEFT JOIN Compete C ON C.id_atleta = A.id_atleta
-GROUP BY P.nome
-ORDER BY Medalhas_por_Atleta DESC;
-"""
-df5 = pd.read_sql(q5, conn)
-st.dataframe(df5, use_container_width=True)
 
 # ----------------------------
 # 7) Medalhas do país vs média global
@@ -223,7 +168,7 @@ st.dataframe(df6, use_container_width=True)
 # ----------------------------
 # 8) Esportes em que o país competiu mas nunca ganhou medalha
 # ----------------------------
-st.subheader("🎯 Esportes em que o país competiu, mas nunca ganhou medalha")
+st.subheader("Esportes em que o país competiu, mas nunca ganhou medalha")
 
 pais_sem_medalha = st.selectbox(
     "Selecione o país:",
