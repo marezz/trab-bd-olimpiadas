@@ -193,28 +193,6 @@ if not df_paises_ano.empty:
     max_row = df_paises_ano.loc[df_paises_ano['Paises_Participantes'].idxmax()]
     st.info(f"Recorde de diversidade: **{int(max_row['Paises_Participantes'])} países** em {int(max_row['Ano'])}.")
 
-
-with st.expander("Outras análises (todas as edições)"):
-    
-    st.subheader("Top 5 edições com mais países")
-    st.dataframe(
-        df_paises_ano.sort_values('Paises_Participantes', ascending=False).head(5),
-        use_container_width=True
-    )
-
-    
-    st.subheader("Crescimento do número de eventos ao longo dos anos")
-    q_eventos = """
-    SELECT O.ano AS Ano, COUNT(E.id_evento) AS Total_Eventos
-    FROM Olimpiada O
-    LEFT JOIN Evento E ON E.ano_olimpiada = O.ano
-    GROUP BY O.ano
-    ORDER BY Ano;
-    """
-    df_eventos = pd.read_sql(q_eventos, conn)
-    st.line_chart(df_eventos.set_index("Ano"))
-
-    
     st.subheader(f" Países sem medalhas — {ano_selecionado}")
     q_paises_sem_medalha_com_outer_join = """
 SELECT 
@@ -249,6 +227,26 @@ if df_sem_medalha.empty:
 else:
     st.warning(f"{len(df_sem_medalha)} países participaram, mas não ganharam medalhas:")
     st.dataframe(df_sem_medalha, use_container_width=True)
+
+with st.expander("Outras análises (todas as edições)"):
+    
+    st.subheader("Top 5 edições com mais países")
+    st.dataframe(
+        df_paises_ano.sort_values('Paises_Participantes', ascending=False).head(5),
+        use_container_width=True
+    )
+
+    
+    st.subheader("Crescimento do número de eventos ao longo dos anos")
+    q_eventos = """
+    SELECT O.ano AS Ano, COUNT(E.id_evento) AS Total_Eventos
+    FROM Olimpiada O
+    LEFT JOIN Evento E ON E.ano_olimpiada = O.ano
+    GROUP BY O.ano
+    ORDER BY Ano;
+    """
+    df_eventos = pd.read_sql(q_eventos, conn)
+    st.line_chart(df_eventos.set_index("Ano"))
 
 st.sidebar.markdown("---")
 st.sidebar.info(f"Edição selecionada: **{ano_selecionado}**")
