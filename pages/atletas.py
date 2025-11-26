@@ -92,10 +92,12 @@ def evolucao_medalhas(_conn, id_atleta):
 @st.cache_data(ttl=600)
 def atletas_mesmo_pais(_conn, id_atleta):
     q = """
-    SELECT a2.nome, a2.altura, a2.peso, COUNT(C2.medalha) AS medalhas
+    SELECT a2.nome,COUNT(DISTINCT O.ano) AS participacoes, COUNT(C2.medalha) AS medalhas
     FROM Atleta a1
     JOIN Atleta a2 ON a2.sigla_pais = a1.sigla_pais
     JOIN Compete C2 ON C2.id_atleta = a2.id_atleta
+    JOIN Evento E ON E.id_evento = C2.id_evento
+    JOIN Olimpiada O ON O.ano = E.ano_olimpiada
     WHERE a1.id_atleta = %s AND a2.id_atleta != %s
     GROUP BY a2.id_atleta, a2.nome, a2.altura, a2.peso
     ORDER BY medalhas DESC
@@ -131,6 +133,26 @@ st.dataframe(df_info, width='stretch')
 df_primeira = participacao(conn, atleta)
 st.markdown(f"Primeira participação: __*{df_primeira.iloc[0,0]}*__")
 st.markdown(f"Última participação: __*{df_primeira.iloc[0,1]}*__")
+
+# ===================== Evolução de medalhas =====================
+st.subheader("Evolução de medalhas por edição")
+df_evolucao = evolucao_medalhas(conn, atleta)
+if not df_evolucao.empty:
+    fig_med = go.Figure(go.Scatter(x=df_evolucao['ano'], y=df_evolucao['medalhas'], mode='lines+markers'))
+    fig_med.update_layout(title="Medalhas ao longo do tempo", xaxis_title="Ano", yaxis_title="Medalhas")
+    st.plotly_chart(fig_med, use_container_width=True)
+else:
+    st.write("Sem dados de medalhas para este atleta.")
+    
+# ===================== Medalhas por modalidade =====================
+st.subheader("Medalhas por modalidade")
+df_modalidade = medalhas_por_modalidade(conn, atleta)
+if not df_modalidade.empty:
+    fig_modal = go.Figure(go.Bar(x=df_modalidade['modalidade'], y=df_modalidade['medalhas']))
+    fig_modal.update_layout(title="Medalhas por modalidade", xaxis_title="Modalidade", yaxis_title="Medalhas")
+    st.plotly_chart(fig_modal, use_container_width=True)
+else:
+    st.write("Este atleta ainda não conquistou medalhas em nenhuma modalidade.")
 
 st.markdown("Desempenho por modalidades")
 df_desempenho = desempenho_modalidades(conn, atleta)
@@ -172,15 +194,6 @@ else:
     grafico_comparacao(df_esporte, atleta, 'altura', 'Altura', 'm')
     st.dataframe(df_esporte, width='stretch')
 
-# ===================== Evolução de medalhas =====================
-st.subheader("Evolução de medalhas por edição")
-df_evolucao = evolucao_medalhas(conn, atleta)
-if not df_evolucao.empty:
-    fig_med = go.Figure(go.Scatter(x=df_evolucao['ano'], y=df_evolucao['medalhas'], mode='lines+markers'))
-    fig_med.update_layout(title="Medalhas ao longo do tempo", xaxis_title="Ano", yaxis_title="Medalhas")
-    st.plotly_chart(fig_med, use_container_width=True)
-else:
-    st.write("Sem dados de medalhas para este atleta.")
 
 # ===================== Comparação com atletas do mesmo país =====================
 st.subheader("Comparação com atletas do mesmo país")
@@ -190,15 +203,6 @@ if not df_pais.empty:
 else:
     st.write("Não há outros atletas do mesmo país para comparação.")
 
-# ===================== Medalhas por modalidade =====================
-st.subheader("Medalhas por modalidade")
-df_modalidade = medalhas_por_modalidade(conn, atleta)
-if not df_modalidade.empty:
-    fig_modal = go.Figure(go.Bar(x=df_modalidade['modalidade'], y=df_modalidade['medalhas']))
-    fig_modal.update_layout(title="Medalhas por modalidade", xaxis_title="Modalidade", yaxis_title="Medalhas")
-    st.plotly_chart(fig_modal, use_container_width=True)
-else:
-    st.write("Este atleta ainda não conquistou medalhas em nenhuma modalidade.")
 
 # ===================== Fechar conexão =====================
 conn.close()

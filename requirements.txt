@@ -1,0 +1,8 @@
+#rodar ' pipreqs . --encoding=utf-8 ' na raiz do projeto para atualizar
+
+altair==6.0.0
+mysql_connector_repackaged==0.3.1
+pandas==2.3.3
+plotly==6.5.0
+python-dotenv==1.2.1
+streamlit==1.51.0
