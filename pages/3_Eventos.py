@@ -35,7 +35,7 @@ def bloco(conteudo, consulta=None):
 
 
 # -------------------- 1. Top 10 atletas --------------------
-st.header("Top 10 atletas por medalhas no esporte escolhido")
+st.subheader("Top 10 atletas por medalhas no esporte escolhido")
 esporte_sel = st.selectbox("Esporte:", esportes)
 
 q_atletas = """
@@ -58,7 +58,10 @@ df_atletas = pd.read_sql(q_atletas, conn, params=[esporte_sel])
 
 def render_atletas():
     st.dataframe(df_atletas, use_container_width=True)
-    chart = (
+
+bloco(render_atletas, q_atletas)
+
+chart = (
         alt.Chart(df_atletas.sort_values("Total_Medalhas", ascending=False))
         .mark_bar()
         .encode(
@@ -67,16 +70,17 @@ def render_atletas():
         )
         .properties(height=400)
     )
-    st.altair_chart(chart, use_container_width=True)
 
-bloco(render_atletas, q_atletas)
+st.altair_chart(chart, use_container_width=True)
+
+
 
 
 # -------------------- 2. Top 10 países --------------------
-st.header("Top 10 países por medalhas no esporte escolhido")
+st.subheader("Top 10 países por medalhas no esporte escolhido")
 esporte_pais = st.selectbox("Esporte:", esportes, key="pais")
 
-q_paises = """
+query = """
 SELECT 
     P.nome AS País,
     COUNT(*) AS Total_Medalhas
@@ -91,16 +95,39 @@ ORDER BY Total_Medalhas DESC
 LIMIT 10;
 """
 
-df_pais = pd.read_sql(q_paises, conn, params=[esporte_pais])
+df_pizza = pd.read_sql(query, conn, params=[esporte_pais])
+df_pizza["label"] = df_pizza["País"] + " (" + df_pizza["Total_Medalhas"].astype(str) + ")"
+
+chart = (
+    alt.Chart(df_pizza)
+    .mark_arc()
+    .encode(
+        theta="Total_Medalhas:Q",
+        color=alt.Color(
+            "label:N",
+            title="País (Medalhas)",
+            sort=alt.SortField(
+                field="total_medalhas",
+                order="descending"
+            )
+        ),
+
+        tooltip=["País", "Total_Medalhas"]
+    )
+    .properties(
+        title=f"Distribuição de medalhas por País – {esporte_pais}"
+    )
+)
 
 def render_paises():
-    st.dataframe(df_pais, use_container_width=True)
+    st.dataframe(df_pizza[['País', "Total_Medalhas"]], use_container_width=True)
 
-bloco(render_paises, q_paises)
+bloco(render_paises, query)
+st.altair_chart(chart, use_container_width=True)
 
 
 # -------------------- 3. Esportes mais competitivos --------------------
-st.header("Esportes com mais países competindo")
+st.subheader("Esportes com mais países competindo")
 
 q_comp = """
 SELECT 
@@ -133,7 +160,7 @@ bloco(render_comp, q_comp)
 
 
 # -------------------- 4. Distribuição por sexo --------------------
-st.header("Distribuição de participantes por sexo")
+st.subheader("Distribuição de participantes por sexo")
 esporte_sexo = st.selectbox("Esporte:", esportes, key="sexo")
 
 q_sexo = """
@@ -161,7 +188,7 @@ bloco(render_sexo, q_sexo)
 
 
 # -------------------- 5. Modalidades do esporte --------------------
-st.header("Modalidades disponíveis")
+st.subheader("Modalidades disponíveis")
 esporte_mod = st.selectbox("Esporte:", esportes, key="mods")
 
 q_mod = """
@@ -180,7 +207,7 @@ bloco(render_mod, q_mod)
 
 
 # -------------------- 6. Médias físicas --------------------
-st.header("Estatísticas médias por esporte")
+st.subheader("Estatísticas médias por esporte")
 esporte_media = st.selectbox("Esporte:", esportes, key="media")
 
 q_media = """
