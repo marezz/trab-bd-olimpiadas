@@ -129,38 +129,6 @@ df5 = pd.read_sql(q5, conn)
 st.dataframe(df5, use_container_width=True)
 
 # ----------------------------
-# 6) Evolução histórica de medalhas do país
-# ----------------------------
-st.subheader("📈 Evolução histórica das medalhas do país")
-
-pais_evolucao = st.selectbox(
-    "Selecione o país:",
-    options=paises['sigla'],
-    format_func=nome_do_pais,
-    key="evolucao_selector"
-)
-
-q6 = """
-SELECT
-    O.ano AS Ano,
-    (
-        SELECT COUNT(*)
-        FROM Compete C2
-        JOIN Atleta A2 ON A2.id_atleta = C2.id_atleta
-        JOIN Evento E2 ON E2.id_evento = C2.id_evento
-        WHERE A2.sigla_pais = %s
-          AND C2.medalha IN ('Ouro','Prata','Bronze')
-          AND E2.ano_olimpiada = O.ano
-    ) AS Medalhas
-FROM Olimpiada O
-ORDER BY O.ano;
-"""
-
-df6 = pd.read_sql(q6, conn, params=[pais_evolucao])
-st.line_chart(df6.set_index("Ano"))
-st.dataframe(df6, use_container_width=True)
-
-# ----------------------------
 # 7) Medalhas do país vs média global
 # ----------------------------
 st.subheader("🌎 Medalhas do país vs média global por edição")
@@ -195,7 +163,9 @@ medias AS (
 SELECT
     m.ano AS Ano,
     COALESCE(
-        (SELECT Medalhas FROM medalhas WHERE ano = m.ano AND sigla_pais = %s),
+        (SELECT Medalhas
+         FROM medalhas
+         WHERE ano = m.ano AND sigla_pais = %s),
         0
     ) AS Medalhas_Pais,
     medias.Media_Global
@@ -207,7 +177,13 @@ ORDER BY Ano;
 """
 
 df7 = pd.read_sql(q7, conn, params=[pais_comp])
+df7 = df7.groupby("Ano", as_index=False).first()  # garante 1 linha por ano
+
+
 st.dataframe(df7, use_container_width=True)
+chart_df7 = df7.set_index("Ano")[["Medalhas_Pais", "Media_Global"]]
+
+st.line_chart(chart_df7)
 
 # ----------------------------
 # 6) Países que estrearam no mesmo ano
