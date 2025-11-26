@@ -1,22 +1,59 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
+import altair as alt
 from db import get_connection
 from dotenv import load_dotenv
-import altair as alt
 
 load_dotenv()
+
+# ============================================================
+# CONFIGURAÇÃO E VARIÁVEL GLOBAL DO TOGGLE
+# ============================================================
+st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
+
+if "mostrar_sql" not in st.session_state:
+    st.session_state.mostrar_sql = False
+
+st.session_state.mostrar_sql = st.sidebar.toggle(
+    "Mostrar consultas SQL",
+    value=st.session_state.mostrar_sql
+)
+
+# HEADER
+st.image("https://s2-valor.glbimg.com/KYxtrUqkoAYg5M6sotCjBtrzaTI=/0x0:960x540/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/x/J/9OkcpdT6qXCJOyRgElDg/primeiros-aneis-olimpicos.avif", width="stretch")
+st.title("Bem vindo à nossa dashboard de Olimpíadas!")
+
+# DENSIDADE VISUAL REDUZIDA DAS TABELAS
+st.markdown("""
+<style>
+[data-testid="stDataFrame"] table tbody tr { height: 18px; }
+div.block-container { padding-top: 1rem; }
+</style>
+""", unsafe_allow_html=True)
 
 conn = get_connection()
 cur = conn.cursor()
 
-st.set_page_config(page_title="Dashboard", page_icon="📊", layout='wide')
-st.title("Bem vindo a nossa dashboard de Olimpíadas!")
+# ============================================================
+# LAYOUT ADAPTATIVO (GRAF/TABELA + SQL)
+# ============================================================
+def bloco(conteudo, consulta=None):
+    mostrar = st.session_state.mostrar_sql
 
-st.subheader("Resumo Geral do Banco")
+    if mostrar and consulta:
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            conteudo()
+        with col2:
+            st.code(consulta, language="sql")
+    else:
+        conteudo()
 
-query = f"""
-        SELECT 
+# ============================================================
+# 1 — RESUMO DO BANCO
+# ============================================================
+query_resumo = """
+SELECT 
     COUNT(DISTINCT p.sigla) AS Paises,
     COUNT(DISTINCT a.id_atleta) AS Atletas,
     COUNT(DISTINCT e.id_evento) AS Modalidades,
@@ -28,82 +65,101 @@ JOIN Atleta a ON c.id_atleta = a.id_atleta
 JOIN Pais p ON a.sigla_pais = p.sigla
 JOIN Evento e ON c.id_evento = e.id_evento
 JOIN Olimpiada o ON e.ano_olimpiada = o.ano;
-;"""
+"""
 
-df_resumo = pd.read_sql(query, conn)
-st.dataframe(df_resumo)
+df_resumo = pd.read_sql(query_resumo, conn)
 
-st.subheader("Maior quantidade de países por Olimpíada")
+st.subheader("Resumo Geral do Banco")
+bloco(lambda: st.dataframe(df_resumo, use_container_width=True),
+      query_resumo)
 
-# Consulta SQL: contar países distintos por ano de Olimpíada
-query = """
+# ============================================================
+# 2 — PAÍSES POR OLIMPÍADA
+# ============================================================
+query_paises = """
 SELECT o.ano, COUNT(DISTINCT a.sigla_pais) AS qtd_paises
 FROM Olimpiada o
 JOIN Evento e ON e.ano_olimpiada = o.ano
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
 GROUP BY o.ano
-ORDER BY o.ano
+ORDER BY o.ano;
 """
 
-df = pd.read_sql(query, conn)
+df_paises = pd.read_sql(query_paises, conn)
 
-# Gráfico de barras Altair
-chart = alt.Chart(df).mark_bar().encode(
-    x=alt.X('ano:O', sort='-y', title='Ano da Olimpíada'),
-    y=alt.Y('qtd_paises:Q', title='Quantidade de países'),
-    tooltip=['ano', 'qtd_paises']
-).properties(
-    width=700,
-    height=400
-)
+st.subheader("Maior quantidade de países por Olimpíada")
+def grafico_paises():
+    chart = (
+        alt.Chart(df_paises)
+        .mark_bar()
+        .encode(
+            x=alt.X("ano:O", axis=alt.Axis(labelAngle=-45)),
+            y="qtd_paises:Q",
+            tooltip=["ano", "qtd_paises"]
+        )
+    )
+    st.altair_chart(chart, use_container_width=True)
 
-st.altair_chart(chart)
+bloco(grafico_paises, query_paises)
 
-st.subheader("Ano inaugural de cada esporte nas olimpíadas """)
+# ============================================================
+# 3 — ANO INAUGURAL
+# ============================================================
+query_inaug = """
+SELECT esporte AS Esporte, MIN(ano_olimpiada) AS Ano_Inauguracao 
+FROM evento 
+JOIN olimpiada 
+GROUP BY esporte  
+ORDER BY Ano_Inauguracao;
+"""
 
-query = f"""
-        SELECT esporte as Esporte, min(ano_olimpiada) as Ano_Inauguracao 
-        FROM evento join olimpiada 
-        GROUP BY esporte  
-        ORDER BY Ano_Inauguracao;"""
+df_inaug = pd.read_sql(query_inaug, conn)
 
-df_inauguracao = pd.read_sql(query, conn)
-st.dataframe(df_inauguracao)
+st.subheader("Ano inaugural de cada esporte")
+bloco(lambda: st.dataframe(df_inaug, use_container_width=True, height=320),
+      query_inaug)
 
-st.subheader("Países com maior número de atletas inscritos")
-
-q4 = """
-SELECT P.nome AS Pais, COUNT(*) AS Total_Atletas
-FROM Atleta A
-JOIN Pais P ON P.sigla = A.sigla_pais
-GROUP BY P.nome
+# ============================================================
+# 4 — PAÍSES COM MAIS ATLETAS
+# ============================================================
+query_paises_atletas = """
+SELECT p.nome AS Pais, COUNT(*) AS Total_Atletas
+FROM Atleta a
+JOIN Pais p ON p.sigla = a.sigla_pais
+GROUP BY p.nome
 ORDER BY Total_Atletas DESC;
 """
-df4 = pd.read_sql(q4, conn)
-st.dataframe(df4, use_container_width=True)
 
-st.subheader("Esportes com mais países competindo")
+df_atletas = pd.read_sql(query_paises_atletas, conn)
 
-# Consulta SQL: contar países distintos por esporte
-query = """
+st.subheader("Países com maior número de atletas")
+bloco(lambda: st.dataframe(df_atletas, use_container_width=True, height=350),
+      query_paises_atletas)
+
+# ============================================================
+# 5 — ESPORTES COM MAIS PAÍSES
+# ============================================================
+query_esportes = """
 SELECT e.esporte, COUNT(DISTINCT a.sigla_pais) AS qtd_paises
 FROM Evento e
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
 GROUP BY e.esporte
 ORDER BY qtd_paises DESC
-LIMIT 10
+LIMIT 10;
 """
 
-df = pd.read_sql(query, conn)
-st.dataframe(df, use_container_width=True)
+df_esportes = pd.read_sql(query_esportes, conn)
 
-st.subheader("Pais com mais medalhas VS média por Olimpíada")
+st.subheader("Esportes com mais países competindo")
+bloco(lambda: st.dataframe(df_esportes, use_container_width=True, height=330),
+      query_esportes)
 
-# Consulta SQL sem usar window functions
-query = """
--- Total de medalhas por país e ano
+# ============================================================
+# 6 — MAIS MEDALHAS VS MÉDIA
+# ============================================================
+query_medalhas = """
 SELECT o.ano, p.nome AS pais, COUNT(c.medalha) AS total_medalhas
 FROM Olimpiada o
 JOIN Evento e ON e.ano_olimpiada = o.ano
@@ -112,104 +168,106 @@ JOIN Atleta a ON a.id_atleta = c.id_atleta
 JOIN Pais p ON p.sigla = a.sigla_pais
 WHERE c.medalha IS NOT NULL
 GROUP BY o.ano, p.nome
-ORDER BY o.ano, total_medalhas DESC
+ORDER BY o.ano, total_medalhas DESC;
 """
 
-df_all = pd.read_sql(query, conn)
+df_all = pd.read_sql(query_medalhas, conn)
+df_max = df_all.groupby("ano").first().reset_index()
+df_media = df_all.groupby("ano")["total_medalhas"].mean().reset_index()
+df_media.rename(columns={"total_medalhas": "media_medalhas"}, inplace=True)
+df_join = df_max.merge(df_media, on="ano")
 
-# Selecionar o país com mais medalhas por ano
-df_max = df_all.groupby('ano').first().reset_index()  # pega o primeiro após sort decrescente
-
-# Média de medalhas por edição
-df_media = df_all.groupby('ano')['total_medalhas'].mean().reset_index()
-df_media.rename(columns={'total_medalhas': 'media_medalhas'}, inplace=True)
-
-# Juntar
-df = df_max.merge(df_media, on='ano')
-
-# Transformar em formato long para Altair
-df_long = pd.melt(df, id_vars=['ano', 'pais'], value_vars=['total_medalhas', 'media_medalhas'],
-                  var_name='tipo', value_name='medalhas')
-
-# Gráfico de linha Altair
-chart = alt.Chart(df_long).mark_line(point=True).encode(
-    x=alt.X('ano:O', title='Ano da Olimpíada'),
-    y=alt.Y('medalhas:Q', title='Medalhas'),
-    color=alt.Color('tipo:N', title='Tipo', scale=alt.Scale(domain=['total_medalhas', 'media_medalhas'],
-                                                            range=['#1f77b4', '#ff7f0e'])),
-    tooltip=['ano', 'pais', 'medalhas', 'tipo']
-).properties(
-    width=700,
-    height=400
+df_long = pd.melt(
+    df_join,
+    id_vars=["ano", "pais"],
+    value_vars=["total_medalhas", "media_medalhas"],
+    var_name="tipo",
+    value_name="medalhas",
 )
 
-st.altair_chart(chart)
+st.subheader("País com mais medalhas vs média")
+def grafico_medalhas():
+    chart = (
+        alt.Chart(df_long)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("ano:O", axis=alt.Axis(labelAngle=-45)),
+            y="medalhas:Q",
+            color="tipo:N",
+            tooltip=["ano", "pais", "medalhas", "tipo"]
+        )
+    )
+    st.altair_chart(chart, use_container_width=True)
 
-st.subheader("Proporção de medalhas por país")
+bloco(grafico_medalhas, query_medalhas)
 
-# Consulta SQL: contar medalhas por país e tipo
-query = """
+# ============================================================
+# 7 — PROPORÇÃO DE MEDALHAS POR PAÍS
+# ============================================================
+
+query_proporcao = """
 SELECT p.nome AS pais, c.medalha, COUNT(*) AS total
 FROM Compete c
 JOIN Atleta a ON a.id_atleta = c.id_atleta
 JOIN Pais p ON p.sigla = a.sigla_pais
 WHERE c.medalha IN ('Ouro', 'Prata', 'Bronze')
-GROUP BY p.nome, c.medalha
+GROUP BY p.nome, c.medalha;
 """
 
-df = pd.read_sql(query, conn)
+df_med = pd.read_sql(query_proporcao, conn)
 
-def agrupar_outros(df_medalha, min_fatias=15, max_fatias=20):
-    df_medalha = df_medalha.copy()
-    df_medalha = df_medalha.sort_values("total", ascending=False)
-
-    # máximo: agrega excedentes em "Outros"
-    if df_medalha.shape[0] > max_fatias:
-        top = df_medalha.iloc[:max_fatias - 1]
-        outros = df_medalha.iloc[max_fatias - 1:]
-        df_medalha = pd.concat([
-            top[["pais", "total"]],
-            pd.DataFrame({"pais": ["Outros"], "total": [outros["total"].sum()]})
-        ], ignore_index=True)
-
-    # mínimo: preenche com "Outros_x" até atingir min_fatias
-    if df_medalha.shape[0] < min_fatias:
-        faltam = min_fatias - df_medalha.shape[0]
-        df_pad = pd.DataFrame({
-            "pais": [f"Outros_{i+1}" for i in range(faltam)],
-            "total": [0] * faltam
-        })
-        df_medalha = pd.concat([df_medalha, df_pad], ignore_index=True)
-
-    return df_medalha
-
-
-def pie_chart(df_medalha, titulo, min_fatias=10, max_fatias=10):
-    df_plot = agrupar_outros(df_medalha, min_fatias, max_fatias)
-    df_plot = df_plot.sort_values("total", ascending=False)
-
-    chart = (
-        alt.Chart(df_plot)
-        .mark_arc()
-        .encode(
-            theta="total:Q",
-            color=alt.Color("pais:N", sort=df_plot["pais"].tolist()),
-            tooltip=["pais", "total"],
+def agrupar(df, min=10, max=10):
+    df = df.sort_values("total", ascending=False).copy()
+    if df.shape[0] > max:
+        top = df.iloc[: max - 1]
+        outros = df.iloc[max - 1 :]
+        df = pd.concat(
+            [top, pd.DataFrame({"pais": ["Outros"], "total": [outros["total"].sum()]})],
+            ignore_index=True,
         )
-        .properties(title=titulo)
+    if df.shape[0] < min:
+        faltando = min - df.shape[0]
+        padding = pd.DataFrame(
+            {"pais": [f"Outros_{i+1}" for i in range(faltando)], "total": [0] * faltando}
+        )
+        df = pd.concat([df, padding], ignore_index=True)
+    return df
+
+# medalhas
+medalhas = ["Ouro", "Prata", "Bronze"]
+
+# agrupar e criar coluna "medalha"
+df_list = []
+for m in medalhas:
+    df_tmp = agrupar(df_med[df_med["medalha"] == m], 10, 10).copy()
+    df_tmp["medalha"] = m
+    df_list.append(df_tmp)
+
+df_plot = pd.concat(df_list, ignore_index=True)
+
+# definir cores consistentes
+paises_unicos = df_plot["pais"].unique()
+color_scale = alt.Scale(domain=paises_unicos.tolist(), scheme="category20")
+
+# gráfico combinado com facet por medalha
+chart = (
+    alt.Chart(df_plot)
+    .mark_arc()
+    .encode(
+        theta="total:Q",
+        color=alt.Color("pais:N", scale=color_scale, legend=alt.Legend(title="País")),
+        column=alt.Column("medalha:N", header=alt.Header(labelAngle=0, title="Medalha")),
+        tooltip=["pais", "total"],
     )
+    .properties(width=150, height=150)
+)
 
-    return chart
+st.subheader("Proporção de medalhas por país (legenda compartilhada)")
+mostrar = st.session_state.get("mostrar_sql")
+if mostrar and query_proporcao:
+    st.code(query_proporcao, language="sql")
 
-
-# Criar gráficos separados
-df_gold = df[df['medalha'] == 'Ouro']
-df_silver = df[df['medalha'] == 'Prata']
-df_bronze = df[df['medalha'] == 'Bronze']
-
-st.altair_chart(pie_chart(df_gold, "Ouro"))
-st.altair_chart(pie_chart(df_silver, "Prata"))
-st.altair_chart(pie_chart(df_bronze, "Bronze"))
+st.altair_chart(chart, use_container_width=True)
 
 cur.close()
 conn.close()

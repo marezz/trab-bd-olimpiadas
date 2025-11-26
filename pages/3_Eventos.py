@@ -1,30 +1,45 @@
 import streamlit as st
-import mysql.connector
 import pandas as pd
-from mysql.connector import Error
-from db import get_connection
-import os
-from dotenv import load_dotenv
 import altair as alt
+from db import get_connection
 
 st.set_page_config(page_title="Análise de Eventos", page_icon="📅", layout="wide")
 st.title("Eventos")
 
 conn = get_connection()
-cur = conn.cursor()
 
-st.title("10 atletas com mais medalhas de cada esporte """)
-     
-modalidade = pd.read_sql("""
-    SELECT DISTINCT esporte 
-    FROM Evento
-    ORDER BY esporte;
-""", conn)["esporte"].tolist()
+@st.cache_data(ttl=600)
+def listar_esportes(_conn):
+    q = "SELECT DISTINCT esporte FROM Evento ORDER BY esporte"
+    return pd.read_sql(q, _conn)["esporte"].tolist()
 
-escolhida = st.selectbox("Selecione a esporte:", modalidade)
+esportes = listar_esportes(conn)
 
-query = f"""
-        SELECT 
+# -------------------- Sidebar Toggle --------------------
+if "mostrar_sql" not in st.session_state:
+    st.session_state.mostrar_sql = False
+
+st.sidebar.toggle("Mostrar SQL", key="mostrar_sql")
+
+# -------------------- Bloco utilitário --------------------
+def bloco(conteudo, consulta=None):
+    mostrar = st.session_state.get("mostrar_sql", False)
+    if mostrar and consulta:
+        col1, col2 = st.columns([3, 2], gap="small")
+        with col1:
+            conteudo()
+        with col2:
+            st.code(consulta, language="sql")
+    else:
+        conteudo()
+
+
+# -------------------- 1. Top 10 atletas --------------------
+st.header("Top 10 atletas por medalhas no esporte escolhido")
+esporte_sel = st.selectbox("Esporte:", esportes)
+
+q_atletas = """
+SELECT 
     A.nome AS Nome,
     (
         SELECT COUNT(*)
@@ -37,149 +52,153 @@ query = f"""
 FROM Atleta A
 ORDER BY Total_Medalhas DESC
 LIMIT 10;
-;"""
+"""
 
-df = pd.read_sql(query, conn, params=[escolhida])
-st.dataframe(df)
+df_atletas = pd.read_sql(q_atletas, conn, params=[esporte_sel])
 
-# 🔥 HISTOGRAMA ORDENADO (Altair)
-df_ordenado = df.sort_values("Total_Medalhas", ascending=False)
-
-st.subheader("📊 Distribuição de Medalhas dos Atletas")
-
-chart = (
-    alt.Chart(df_ordenado)
-    .mark_bar()
-    .encode(
-        x=alt.X("Nome:N", sort=None, axis=alt.Axis(labelAngle=-45)),
-        y="Total_Medalhas:Q"
+def render_atletas():
+    st.dataframe(df_atletas, use_container_width=True)
+    chart = (
+        alt.Chart(df_atletas.sort_values("Total_Medalhas", ascending=False))
+        .mark_bar()
+        .encode(
+            x=alt.X("Nome:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+            y="Total_Medalhas:Q"
+        )
+        .properties(height=400)
     )
-    .properties(width=700, height=400)
-)
+    st.altair_chart(chart, use_container_width=True)
 
-st.altair_chart(chart, use_container_width=True)
-
-st.title("10 Países com mais medalhas de cada esporte """)
-
-modalidade_pais = pd.read_sql("""
-    SELECT DISTINCT esporte 
-    FROM Evento
-    ORDER BY esporte;
-""", conn)["esporte"].tolist()
-
-escolhida_pais = st.selectbox("Selecione o esporte:", modalidade_pais)
-
-query = f"""
-        SELECT 
-        A.sigla_pais as País,
-        COUNT(*) AS Total_Medalhas
-    FROM Atleta A
-    JOIN Compete C ON C.id_atleta = A.id_atleta
-    Join Pais P ON P.sigla = A.sigla_pais
-    JOIN Evento E ON E.id_evento = C.id_evento
-    WHERE C.medalha <> "Sem Medalha"
-    AND E.esporte = %s
-    GROUP BY P.sigla
-    ORDER BY total_medalhas DESC;"""
-
-df_pais = pd.read_sql(query, conn, params=[escolhida_pais])
-st.dataframe(df_pais)
+bloco(render_atletas, q_atletas)
 
 
-st.title("Esportes com mais países competindo ")
+# -------------------- 2. Top 10 países --------------------
+st.header("Top 10 países por medalhas no esporte escolhido")
+esporte_pais = st.selectbox("Esporte:", esportes, key="pais")
 
-query = """SELECT E.esporte, COUNT(DISTINCT A.sigla_pais) AS total_paises 
-            FROM Evento E 
-            JOIN Compete C ON C.id_evento = E.id_evento 
-            JOIN Atleta A ON A.id_atleta = C.id_atleta 
-            GROUP BY E.esporte 
-            ORDER BY total_paises DESC
-            LIMIT 10;
+q_paises = """
+SELECT 
+    P.nome AS País,
+    COUNT(*) AS Total_Medalhas
+FROM Atleta A
+JOIN Pais P ON P.sigla = A.sigla_pais
+JOIN Compete C ON C.id_atleta = A.id_atleta
+JOIN Evento E ON E.id_evento = C.id_evento
+WHERE C.medalha <> 'Sem Medalha'
+  AND E.esporte = %s
+GROUP BY P.nome
+ORDER BY Total_Medalhas DESC
+LIMIT 10;
 """
 
-df_competitivo = pd.read_sql(query, conn)
-st.dataframe(df_competitivo)
+df_pais = pd.read_sql(q_paises, conn, params=[esporte_pais])
 
-df_comp_ordenado = df_competitivo.sort_values("total_paises", ascending=False)
+def render_paises():
+    st.dataframe(df_pais, use_container_width=True)
 
-st.subheader("📊 Esportes com mais países competindo")
+bloco(render_paises, q_paises)
 
-chart_comp = (
-    alt.Chart(df_comp_ordenado)
-    .mark_bar()  # largura das barras (ajustável!)
-    .encode(
-        x=alt.X("esporte:N", sort=None, title="Esporte"),
-        y=alt.Y("total_paises:Q", title="Total de Países Participantes")
+
+# -------------------- 3. Esportes mais competitivos --------------------
+st.header("Esportes com mais países competindo")
+
+q_comp = """
+SELECT 
+    E.esporte,
+    COUNT(DISTINCT A.sigla_pais) AS total_paises 
+FROM Evento E 
+JOIN Compete C ON C.id_evento = E.id_evento 
+JOIN Atleta A ON A.id_atleta = C.id_atleta 
+GROUP BY E.esporte 
+ORDER BY total_paises DESC
+LIMIT 10;
+"""
+
+df_comp = pd.read_sql(q_comp, conn)
+
+def render_comp():
+    st.dataframe(df_comp, use_container_width=True)
+    chart = (
+        alt.Chart(df_comp.sort_values("total_paises", ascending=False))
+        .mark_bar()
+        .encode(
+            x=alt.X("esporte:N", sort=None),
+            y="total_paises:Q"
+        )
+        .properties(height=400)
     )
-    .properties(width=700, height=400)
-)
+    st.altair_chart(chart, use_container_width=True)
 
-st.altair_chart(chart_comp, use_container_width=True)
+bloco(render_comp, q_comp)
 
-st.title("Distribuição por sexo dos participantes")
 
-esportes = pd.read_sql("SELECT DISTINCT esporte FROM Evento ORDER BY esporte;", conn)["esporte"].tolist()
-esporte_sexo = st.selectbox("Selecione o esporte: ", esportes)
+# -------------------- 4. Distribuição por sexo --------------------
+st.header("Distribuição de participantes por sexo")
+esporte_sexo = st.selectbox("Esporte:", esportes, key="sexo")
 
-query_sexo = """
-    SELECT 
-        A.sexo,
-        COUNT(*) AS total
-    FROM Atleta A
-    JOIN Compete C ON C.id_atleta = A.id_atleta
-    JOIN Evento E ON E.id_evento = C.id_evento
-    WHERE E.esporte = %s
-    GROUP BY A.sexo;
+q_sexo = """
+SELECT A.sexo, COUNT(*) AS total
+FROM Atleta A
+JOIN Compete C ON C.id_atleta = A.id_atleta
+JOIN Evento E ON E.id_evento = C.id_evento
+WHERE E.esporte = %s
+GROUP BY A.sexo;
 """
 
-df_sexo = pd.read_sql(query_sexo, conn, params=[esporte_sexo])
-st.dataframe(df_sexo)
+df_sexo = pd.read_sql(q_sexo, conn, params=[esporte_sexo])
 
-# Gráfico de pizza
-pie = (
-    alt.Chart(df_sexo)
-    .mark_arc()
-    .encode(
-        theta="total:Q",
-        color="sexo:N"
+def render_sexo():
+    st.dataframe(df_sexo, use_container_width=True)
+    pie = (
+        alt.Chart(df_sexo)
+        .mark_arc()
+        .encode(theta="total:Q", color="sexo:N")
+        .properties(height=400)
     )
-    .properties(width=400, height=400)
-)
+    st.altair_chart(pie, use_container_width=True)
 
-st.altair_chart(pie, use_container_width=True)
+bloco(render_sexo, q_sexo)
 
 
-st.title("Modalidades do esporte selecionado")
+# -------------------- 5. Modalidades do esporte --------------------
+st.header("Modalidades disponíveis")
+esporte_mod = st.selectbox("Esporte:", esportes, key="mods")
 
-esporte_mod = st.selectbox("Selecione o esporte:", esportes, key="modalidades")
-
-query_modalidades = """
-    SELECT DISTINCT modalidade
-    FROM Evento
-    WHERE esporte = %s
-    ORDER BY modalidade;
+q_mod = """
+SELECT DISTINCT modalidade
+FROM Evento
+WHERE esporte = %s
+ORDER BY modalidade;
 """
 
-df_mod = pd.read_sql(query_modalidades, conn, params=[esporte_mod])
-st.dataframe(df_mod)
+df_mod = pd.read_sql(q_mod, conn, params=[esporte_mod])
 
-st.title("ltura, peso e idade média por esporte")
+def render_mod():
+    st.dataframe(df_mod, use_container_width=True)
 
-esporte_media = st.selectbox("Selecione o esporte:", esportes, key="media")
+bloco(render_mod, q_mod)
 
-query_media = """
-    SELECT 
-        AVG(A.altura) AS altura_media,
-        AVG(A.peso) AS peso_medio,
-        AVG(A.Idade) AS idade_media
-    FROM Atleta A
-    JOIN Compete C ON C.id_atleta = A.id_atleta
-    JOIN Evento E ON E.id_evento = C.id_evento
-    WHERE E.esporte = %s;
+
+# -------------------- 6. Médias físicas --------------------
+st.header("Estatísticas médias por esporte")
+esporte_media = st.selectbox("Esporte:", esportes, key="media")
+
+q_media = """
+SELECT 
+    AVG(A.altura) AS altura_media,
+    AVG(A.peso) AS peso_medio,
+    AVG(A.idade) AS idade_media
+FROM Atleta A
+JOIN Compete C ON C.id_atleta = A.id_atleta
+JOIN Evento E ON E.id_evento = C.id_evento
+WHERE E.esporte = %s;
 """
 
-df_media = pd.read_sql(query_media, conn, params=[esporte_media])
-st.dataframe(df_media)
+df_media = pd.read_sql(q_media, conn, params=[esporte_media])
 
-cur.close()
+def render_media():
+    st.dataframe(df_media, use_container_width=True)
+
+bloco(render_media, q_media)
+
 conn.close()
