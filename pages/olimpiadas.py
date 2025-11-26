@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 from db import get_connection
 
 st.set_page_config(page_title="Olimpíadas - Insights", layout="wide")
@@ -18,7 +19,7 @@ if conn is None:
     st.stop()
 
 # ----------------------------
-# 🔽 Seleção global de Olimpíada (ano)
+# Seleção global de Olimpíada (ano)
 # ----------------------------
 st.sidebar.header("Filtro Global")
 anos_df = pd.read_sql("SELECT DISTINCT ano FROM Olimpiada ORDER BY ano DESC", conn)
@@ -236,6 +237,3 @@ with st.expander("🔍 Outras análises (todas as edições)"):
 # ----------------------------
 st.sidebar.markdown("---")
 st.sidebar.info(f"Edição selecionada: **{ano_selecionado}**")
-
-# Import necessário para o gráfico de pizza:
-import matplotlib.pyplot as plt
