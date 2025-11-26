@@ -4,12 +4,13 @@ import pandas as pd
 from mysql.connector import Error
 import os
 from dotenv import load_dotenv
+from db import get_connection
 
 # Carregar variáveis de ambiente
 load_dotenv()
 
 # Configuração da página
-st.set_page_config(page_title="CRUD Olimpíadas", page_icon="🏅", layout="wide")
+st.set_page_config(page_title="CRUD Olimpíadas", page_icon="⚙️", layout="wide")
 
 # Função para criar conexão com o banco
 @st.cache_resource

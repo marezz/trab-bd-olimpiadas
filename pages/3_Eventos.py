@@ -7,12 +7,13 @@ import os
 from dotenv import load_dotenv
 import altair as alt
 
+st.set_page_config(page_title="Análise de Eventos", page_icon="📅", layout="wide")
 st.title("Eventos")
 
 conn = get_connection()
 cur = conn.cursor()
 
-st.title("🥇🏆 10 atletas com mais medalhas de cada esporte """)
+st.title("10 atletas com mais medalhas de cada esporte """)
      
 modalidade = pd.read_sql("""
     SELECT DISTINCT esporte 
@@ -58,7 +59,7 @@ chart = (
 
 st.altair_chart(chart, use_container_width=True)
 
-st.title("🌍🥇 10 Países com mais medalhas de cada esporte """)
+st.title("10 Países com mais medalhas de cada esporte """)
 
 modalidade_pais = pd.read_sql("""
     SELECT DISTINCT esporte 
@@ -84,18 +85,8 @@ query = f"""
 df_pais = pd.read_sql(query, conn, params=[escolhida_pais])
 st.dataframe(df_pais)
 
-st.title("📅🔥 Ano inaugural de cada esporte nas olimpíadas """)
 
-query = f"""
-        SELECT esporte as Esporte, min(ano_olimpiada) as Ano_Inauguracao 
-        FROM evento join olimpiada 
-        GROUP BY esporte  
-        ORDER BY Ano_Inauguracao;"""
-
-df_inauguracao = pd.read_sql(query, conn)
-st.dataframe(df_inauguracao)
-
-st.title("🌎🤝 Esportes com mais países competindo ")
+st.title("Esportes com mais países competindo ")
 
 query = """SELECT E.esporte, COUNT(DISTINCT A.sigla_pais) AS total_paises 
             FROM Evento E 
@@ -125,7 +116,7 @@ chart_comp = (
 
 st.altair_chart(chart_comp, use_container_width=True)
 
-st.title("⚧️📊 Distribuição por sexo dos participantes")
+st.title("Distribuição por sexo dos participantes")
 
 esportes = pd.read_sql("SELECT DISTINCT esporte FROM Evento ORDER BY esporte;", conn)["esporte"].tolist()
 esporte_sexo = st.selectbox("Selecione o esporte: ", esportes)
@@ -158,7 +149,7 @@ pie = (
 st.altair_chart(pie, use_container_width=True)
 
 
-st.title("🏅📌 Modalidades do esporte selecionado")
+st.title("Modalidades do esporte selecionado")
 
 esporte_mod = st.selectbox("Selecione o esporte:", esportes, key="modalidades")
 
@@ -172,7 +163,7 @@ query_modalidades = """
 df_mod = pd.read_sql(query_modalidades, conn, params=[esporte_mod])
 st.dataframe(df_mod)
 
-st.title("📏⚖️ Altura, peso e idade média por esporte")
+st.title("ltura, peso e idade média por esporte")
 
 esporte_media = st.selectbox("Selecione o esporte:", esportes, key="media")
 

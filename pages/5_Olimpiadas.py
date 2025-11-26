@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from db import get_connection
 
-st.set_page_config(page_title="Olimpíadas - Insights", layout="wide")
+st.set_page_config(page_title="Olimpíadas - Insights", layout="wide", page_icon="🏅")
 st.title("Olimpíadas")
 
 # Conexão com o banco

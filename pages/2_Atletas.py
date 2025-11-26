@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from db import get_connection
 
-st.set_page_config(page_title="Análise de Atletas", layout="wide")
+st.set_page_config(page_title="Análise de Atletas", page_icon="🏃", layout="wide")
 st.title("Atletas")
 
 # ===================== Funções de conexão e queries =====================
@@ -88,21 +88,6 @@ def evolucao_medalhas(_conn, id_atleta):
     ORDER BY O.ano
     """
     return pd.read_sql(q, _conn, params=[id_atleta])
-
-@st.cache_data(ttl=600)
-def atletas_mesmo_pais(_conn, id_atleta):
-    q = """
-    SELECT a2.nome,COUNT(DISTINCT O.ano) AS participacoes, COUNT(C2.medalha) AS medalhas
-    FROM Atleta a1
-    JOIN Atleta a2 ON a2.sigla_pais = a1.sigla_pais
-    JOIN Compete C2 ON C2.id_atleta = a2.id_atleta
-    JOIN Evento E ON E.id_evento = C2.id_evento
-    JOIN Olimpiada O ON O.ano = E.ano_olimpiada
-    WHERE a1.id_atleta = %s AND a2.id_atleta != %s
-    GROUP BY a2.id_atleta, a2.nome, a2.altura, a2.peso
-    ORDER BY medalhas DESC
-    """
-    return pd.read_sql(q, _conn, params=[id_atleta, id_atleta])
 
 @st.cache_data(ttl=600)
 def medalhas_por_modalidade(_conn, id_atleta):
@@ -193,16 +178,6 @@ else:
     grafico_comparacao(df_esporte, atleta, 'peso', 'Peso', 'kg')
     grafico_comparacao(df_esporte, atleta, 'altura', 'Altura', 'm')
     st.dataframe(df_esporte, width='stretch')
-
-
-# ===================== Comparação com atletas do mesmo país =====================
-st.subheader("Comparação com atletas do mesmo país")
-df_pais = atletas_mesmo_pais(conn, atleta)
-if not df_pais.empty:
-    st.dataframe(df_pais, width='stretch')
-else:
-    st.write("Não há outros atletas do mesmo país para comparação.")
-
 
 # ===================== Fechar conexão =====================
 conn.close()
