@@ -74,7 +74,7 @@ ORDER BY Total_Medalhas DESC
 LIMIT 10;
 """
 df_prop_medalhas = pd.read_sql(q_prop_medalhas, conn, params=[ano_selecionado])
-bloco("Proporção de medalhas por atleta", lambda: st.dataframe(df_prop_medalhas, use_container_width=True), q_prop_medalhas)
+bloco("Proporção de medalhas por atleta", lambda: st.dataframe(df_prop_medalhas, use_container_width=True, hide_index=True), q_prop_medalhas)
 
 # ==================== Top 10 atletas mais vitoriosos ====================
 q_top_atletas = """
@@ -95,7 +95,7 @@ ORDER BY Total_Medalhas DESC, Ouro DESC, Prata DESC
 LIMIT 10;
 """
 df_top_atletas = pd.read_sql(q_top_atletas, conn, params=[ano_selecionado])
-bloco("Top 10 atletas mais vitoriosos", lambda: st.dataframe(df_top_atletas, use_container_width=True), q_top_atletas)
+bloco("Top 10 atletas mais vitoriosos", lambda: st.dataframe(df_top_atletas, use_container_width=True, hide_index=True), q_top_atletas)
 
 # ==================== Top 10 países com atletas mais pesados ====================
 q_paises_mais_pesados = """
@@ -114,7 +114,7 @@ ORDER BY Peso_Medio DESC
 LIMIT 10;
 """
 df_paises_pesados = pd.read_sql(q_paises_mais_pesados, conn, params=[ano_selecionado])
-bloco("Top 10 países com atletas mais pesados", lambda: st.dataframe(df_paises_pesados, use_container_width=True), q_paises_mais_pesados)
+bloco("Top 10 países com atletas mais pesados", lambda: st.dataframe(df_paises_pesados, use_container_width=True, hide_index=True), q_paises_mais_pesados)
 
 # ==================== Atleta mais jovem e mais velho por sexo ====================
 q_idades_extremas = """
@@ -141,7 +141,7 @@ WHERE rn_jovem = 1 OR rn_velho = 1
 GROUP BY sexo;
 """
 df_idades_extremas = pd.read_sql(q_idades_extremas, conn, params=[ano_selecionado])
-bloco("Atleta mais jovem e mais velho por sexo", lambda: st.dataframe(df_idades_extremas, use_container_width=True), q_idades_extremas)
+bloco("Atleta mais jovem e mais velho por sexo", lambda: st.dataframe(df_idades_extremas, use_container_width=True, hide_index=True), q_idades_extremas)
 
 # ==================== Proporção de gênero ====================
 q_genero = """
@@ -197,5 +197,5 @@ ORDER BY O.ano;
 """
 
 df_paises_ano = pd.read_sql(q_paises_ano, conn)
-bloco("Número de países por edição", lambda: st.dataframe(df_paises_ano, use_container_width=True), q_paises_ano)
+bloco("Número de países por edição", lambda: st.dataframe(df_paises_ano, use_container_width=True, hide_index=True), q_paises_ano)
 st.bar_chart(df_paises_ano.set_index('Ano'), sort='Paises_Participantes',)

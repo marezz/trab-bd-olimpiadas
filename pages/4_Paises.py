@@ -54,10 +54,11 @@ JOIN Pais P ON P.sigla = A.sigla_pais
 JOIN Compete C ON C.id_atleta = A.id_atleta
 WHERE P.sigla = %s AND C.medalha IN ('Ouro','Prata','Bronze')
 GROUP BY A.id_atleta
-ORDER BY Total_Medalhas DESC;
+ORDER BY Total_Medalhas DESC
+LIMIT 20;
 """
 df1 = pd.read_sql(q1, conn, params=[pais_ranking])
-bloco(lambda: st.dataframe(df1, use_container_width=True), q1, params=[pais_ranking])
+bloco(lambda: st.dataframe(df1, use_container_width=True, hide_index=True), q1, params=[pais_ranking])
 
 # ---------------------------- 2) EVENTOS COM MAIS MEDALHAS ----------------------------
 st.subheader("Eventos em que o país mais ganha medalhas")
@@ -72,10 +73,11 @@ JOIN Compete C ON C.id_atleta = A.id_atleta
 JOIN Evento E ON E.id_evento = C.id_evento
 WHERE P.sigla = %s AND C.medalha IN ('Ouro','Prata','Bronze')
 GROUP BY P.nome, E.esporte, E.modalidade
-ORDER BY Total_Medalhas DESC;
+ORDER BY Total_Medalhas DESC
+LIMIT 10;
 """
 df2 = pd.read_sql(q2, conn, params=[pais_eventos])
-bloco(lambda: st.dataframe(df2, use_container_width=True), q2, params=[pais_eventos])
+bloco(lambda: st.dataframe(df2, use_container_width=True, hide_index=True), q2, params=[pais_eventos])
 
 # ---------------------------- 7) MEDALHAS VS MÉDIA GLOBAL ----------------------------
 st.subheader("Medalhas do país vs média global por edição")
@@ -106,7 +108,7 @@ ORDER BY Ano;
 """
 df7 = pd.read_sql(q7, conn, params=[pais_comp])
 df7 = df7.groupby("Ano", as_index=False).first()
-bloco(lambda: st.dataframe(df7, use_container_width=True), q7, params=[pais_comp])
+bloco(lambda: st.dataframe(df7, use_container_width=True, hide_index=True), q7, params=[pais_comp])
 
 chart_df7 = df7.set_index("Ano")[["Medalhas_Pais", "Media_Global"]]
 colors = ["#FFEE00A7", "#0051FFC8"]
@@ -135,7 +137,7 @@ HAVING Ano_Estreia = (
 ORDER BY P2.nome;
 """
 df6 = pd.read_sql(q6, conn, params=[pais_estreia])
-bloco(lambda: st.dataframe(df6, use_container_width=True), q6, params=[pais_estreia])
+bloco(lambda: st.dataframe(df6, use_container_width=True, hide_index=True), q6, params=[pais_estreia])
 
 # ---------------------------- 8) ESPORTES SEM MEDALHAS ----------------------------
 st.subheader("Esportes em que o país competiu, mas nunca ganhou medalha")
@@ -158,6 +160,6 @@ WHERE A2.sigla_pais = %s
 ORDER BY Esporte, Modalidade;
 """
 df8 = pd.read_sql(q8, conn, params=[pais_sem_medalha, pais_sem_medalha])
-bloco(lambda: st.dataframe(df8, use_container_width=True), q8, params=[pais_sem_medalha, pais_sem_medalha])
+bloco(lambda: st.dataframe(df8, use_container_width=True, hide_index=True), q8, params=[pais_sem_medalha, pais_sem_medalha])
 
 conn.close()

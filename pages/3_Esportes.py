@@ -166,27 +166,44 @@ st.subheader("Distribuição de participantes por sexo")
 esporte_sexo = st.selectbox("Esporte:", esportes, key="Sexo")
 
 q_sexo = """
-SELECT A.sexo as Sexo, COUNT(*) AS Total
+SELECT A.sexo AS Sexo, COUNT(*) AS Total
 FROM Atleta A
 JOIN Compete C ON C.id_atleta = A.id_atleta
 JOIN Evento E ON E.id_evento = C.id_evento
 WHERE E.esporte = %s
-GROUP BY A.Sexo;
+GROUP BY A.sexo;
 """
 
 df_sexo = pd.read_sql(q_sexo, conn, params=[esporte_sexo])
 
 def render_sexo():
     st.dataframe(df_sexo, use_container_width=True, hide_index=True)
+
     pie = (
         alt.Chart(df_sexo)
         .mark_arc()
-        .encode(theta="Total:Q", color="Sexo:N")
-        .properties(height=400)
+        .encode(
+            theta="Total:Q",
+            color=alt.Color(
+                "Sexo:N",
+                scale=alt.Scale(
+                    domain=["F", "M"],               # valores da consulta
+                    range=["hotpink", "royalblue"]           # cores desejadas
+                ),
+                title="Sexo"
+            ),
+            tooltip=["Sexo", "Total"]
+        )
+        .properties(
+            height=400,
+            title=f"Distribuição por Sexo – {esporte_sexo}"
+        )
     )
+
     st.altair_chart(pie, use_container_width=True)
 
 bloco(render_sexo, q_sexo)
+
 
 
 # -------------------- 5. Modalidades do esporte --------------------
@@ -194,10 +211,10 @@ st.subheader("Modalidades disponíveis")
 esporte_mod = st.selectbox("Esporte:", esportes, key="mods")
 
 q_mod = """
-SELECT DISTINCT modalidade
+SELECT DISTINCT modalidade as  Modalidade
 FROM Evento
 WHERE esporte = %s
-ORDER BY modalidade;
+ORDER BY Modalidade;
 """
 
 df_mod = pd.read_sql(q_mod, conn, params=[esporte_mod])
@@ -209,14 +226,14 @@ bloco(render_mod, q_mod)
 
 
 # -------------------- 6. Médias físicas --------------------
-st.subheader("Estatísticas médias por esporte")
+st.subheader("Estatísticas médias dos atletas por esporte")
 esporte_media = st.selectbox("Esporte:", esportes, key="media")
 
 q_media = """
 SELECT 
-    AVG(A.altura) AS altura_media,
-    AVG(A.peso) AS peso_medio,
-    AVG(A.idade) AS idade_media
+    AVG(A.altura) AS Altura_Média,
+    AVG(A.peso) AS Peso_Médio,
+    AVG(A.idade) AS Idade_Média
 FROM Atleta A
 JOIN Compete C ON C.id_atleta = A.id_atleta
 JOIN Evento E ON E.id_evento = C.id_evento
