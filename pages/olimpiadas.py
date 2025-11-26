@@ -212,7 +212,7 @@ if not df_paises_ano.empty:
 # ----------------------------
 # [Opcional] Reexibir os 2 primeiros insights originais (globais, sem filtro)
 # ----------------------------
-with st.expander("🔍 Outras análises (todas as edições)"):
+with st.expander("Outras análises (todas as edições)"):
     # 7) Original: Maior diversidade de países (já está no df_paises_ano acima, mas exibimos tabela)
     st.subheader("Top 5 edições com mais países")
     st.dataframe(
