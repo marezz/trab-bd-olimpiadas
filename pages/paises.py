@@ -219,3 +219,37 @@ ORDER BY P2.nome;
 
 df6 = pd.read_sql(q6, conn, params=[pais_estreia])
 st.dataframe(df6, use_container_width=True)
+
+# ----------------------------
+# 8) Esportes em que o país competiu mas nunca ganhou medalha
+# ----------------------------
+st.subheader("🎯 Esportes em que o país competiu, mas nunca ganhou medalha")
+
+pais_sem_medalha = st.selectbox(
+    "Selecione o país:",
+    options=paises['sigla'],
+    format_func=nome_do_pais,
+    key="sem_medalha_selector"
+)
+
+q8 = """
+SELECT DISTINCT 
+    E.modalidade AS Modalidade,
+    E.esporte AS Esporte
+FROM Evento E
+LEFT JOIN (
+    SELECT C.id_evento
+    FROM Compete C
+    JOIN Atleta A ON A.id_atleta = C.id_atleta
+    WHERE A.sigla_pais = %s
+      AND C.medalha IN ('Ouro', 'Prata', 'Bronze')
+) M ON M.id_evento = E.id_evento
+JOIN Compete C2 ON C2.id_evento = E.id_evento
+JOIN Atleta A2 ON A2.id_atleta = C2.id_atleta
+WHERE A2.sigla_pais = %s
+  AND M.id_evento IS NULL
+ORDER BY Esporte, Modalidade;
+"""
+
+df8 = pd.read_sql(q8, conn, params=[pais_sem_medalha, pais_sem_medalha])
+st.dataframe(df8, use_container_width=True)
