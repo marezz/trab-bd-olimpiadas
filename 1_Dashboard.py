@@ -80,13 +80,13 @@ bloco(lambda: st.dataframe(df_resumo, use_container_width=True, hide_index=True)
 # 2 — PAÍSES POR OLIMPÍADA
 # ============================================================
 query_paises = """
-SELECT o.ano, COUNT(DISTINCT a.sigla_pais) AS qtd_paises
+SELECT o.ano as Ano, COUNT(DISTINCT a.sigla_pais) AS Quantidade_Países
 FROM Olimpiada o
-JOIN Evento e ON e.ano_olimpiada = o.ano
+JOIN Evento e ON e.ano_olimpiada = o.Ano
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
-GROUP BY o.ano
-ORDER BY o.ano;
+GROUP BY o.Ano
+ORDER BY o.Ano;
 """
 
 df_paises = pd.read_sql(query_paises, conn)
@@ -96,9 +96,9 @@ def grafico_paises():
         alt.Chart(df_paises)
         .mark_bar()
         .encode(
-            x=alt.X("ano:O", axis=alt.Axis(labelAngle=-45)),
-            y="qtd_paises:Q",
-            tooltip=["ano", "qtd_paises"]
+            x=alt.X("Ano:O", axis=alt.Axis(labelAngle=-45)),
+            y="Quantidade_Países:Q",
+            tooltip=["Ano", "Quantidade_Países"]
         )
     )
     st.altair_chart(chart, use_container_width=True)
