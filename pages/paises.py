@@ -12,7 +12,7 @@ except Exception:
     conn = None
 
 if conn is None:
-    st.error("❌ Não foi possível conectar ao banco de dados.")
+    st.error("Não foi possível conectar ao banco de dados.")
     st.stop()
 
 # Carregar países com nome completo
@@ -25,7 +25,7 @@ def nome_do_pais(sigla):
 # ----------------------------
 # 1) RANKING DE ATLETAS POR PAÍS
 # ----------------------------
-st.subheader("🥇 Ranking de atletas mais vitoriosos do país")
+st.subheader("Ranking de atletas mais vitoriosos do país")
 
 pais_ranking = st.selectbox(
     "Selecione o país:",
@@ -49,7 +49,7 @@ st.dataframe(df1, use_container_width=True)
 # ----------------------------
 # 2) EVENTOS COM MAIS MEDALHAS
 # ----------------------------
-st.subheader("🏆 Eventos em que o país mais ganha medalhas")
+st.subheader("Eventos em que o país mais ganha medalhas")
 
 pais_eventos = st.selectbox(
     "Selecione o país:",
@@ -75,7 +75,7 @@ st.dataframe(df2, use_container_width=True)
 # ----------------------------
 # 3) PRIMEIRA PARTICIPAÇÃO POR PAÍS
 # ----------------------------
-st.subheader("📅 Ano da primeira participação por país")
+st.subheader("Ano da primeira participação por país")
 
 q3 = """
 SELECT P.nome AS Pais, MIN(O.ano) AS Ano_Primeira_Participacao
@@ -93,7 +93,7 @@ st.dataframe(df3, use_container_width=True)
 # ----------------------------
 # 4) MAIS ATLETAS INSCRITOS
 # ----------------------------
-st.subheader("👥 Países com maior número de atletas inscritos")
+st.subheader("Países com maior número de atletas inscritos")
 
 q4 = """
 SELECT P.nome AS Pais, COUNT(*) AS Total_Atletas
@@ -108,7 +108,7 @@ st.dataframe(df4, use_container_width=True)
 # ----------------------------
 # 5) PROPORÇÃO DE MEDALHAS POR ATLETA
 # ----------------------------
-st.subheader("📊 Proporção de medalhas por atleta")
+st.subheader("Proporção de medalhas por atleta")
 
 q5 = """
 SELECT 
@@ -131,7 +131,7 @@ st.dataframe(df5, use_container_width=True)
 # ----------------------------
 # 7) Medalhas do país vs média global
 # ----------------------------
-st.subheader("🌎 Medalhas do país vs média global por edição")
+st.subheader("Medalhas do país vs média global por edição")
 
 pais_comp = st.selectbox(
     "Selecione o país:",
@@ -182,13 +182,14 @@ df7 = df7.groupby("Ano", as_index=False).first()  # garante 1 linha por ano
 
 st.dataframe(df7, use_container_width=True)
 chart_df7 = df7.set_index("Ano")[["Medalhas_Pais", "Media_Global"]]
+colors = ["#FFEE00A7", "#0051FFC8"]
 
-st.line_chart(chart_df7)
+st.line_chart(chart_df7, color=colors)
 
 # ----------------------------
 # 6) Países que estrearam no mesmo ano
 # ----------------------------
-st.subheader("🎌 Países que estrearam no mesmo ano do país selecionado")
+st.subheader("Países que estrearam no mesmo ano do país selecionado")
 
 pais_estreia = st.selectbox(
     "Selecione o país:",
