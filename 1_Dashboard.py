@@ -74,19 +74,19 @@ JOIN Olimpiada o ON e.ano_olimpiada = o.ano;
 
 df_resumo = pd.read_sql(query_resumo, conn)
 st.subheader("Resumo Geral do Banco")
-bloco(lambda: st.dataframe(df_resumo, use_container_width=True), query_resumo)
+bloco(lambda: st.dataframe(df_resumo, use_container_width=True, hide_index=True), query_resumo)
 
 # ============================================================
 # 2 — PAÍSES POR OLIMPÍADA
 # ============================================================
 query_paises = """
-SELECT o.ano, COUNT(DISTINCT a.sigla_pais) AS qtd_paises
+SELECT o.ano as Ano, COUNT(DISTINCT a.sigla_pais) AS Quantidade_Países
 FROM Olimpiada o
-JOIN Evento e ON e.ano_olimpiada = o.ano
+JOIN Evento e ON e.ano_olimpiada = o.Ano
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
-GROUP BY o.ano
-ORDER BY o.ano;
+GROUP BY o.Ano
+ORDER BY o.Ano;
 """
 
 df_paises = pd.read_sql(query_paises, conn)
@@ -96,9 +96,9 @@ def grafico_paises():
         alt.Chart(df_paises)
         .mark_bar()
         .encode(
-            x=alt.X("ano:O", axis=alt.Axis(labelAngle=-45)),
-            y="qtd_paises:Q",
-            tooltip=["ano", "qtd_paises"]
+            x=alt.X("Ano:O", axis=alt.Axis(labelAngle=-45)),
+            y="Quantidade_Países:Q",
+            tooltip=["Ano", "Quantidade_Países"]
         )
     )
     st.altair_chart(chart, use_container_width=True)
@@ -119,7 +119,7 @@ ORDER BY Ano_Inauguracao;
 
 df_inaug = pd.read_sql(query_inaug, conn)
 st.subheader("Ano inaugural de cada esporte")
-bloco(lambda: st.dataframe(df_inaug, use_container_width=True, height=320), query_inaug)
+bloco(lambda: st.dataframe(df_inaug, use_container_width=True, height=320, hide_index=True), query_inaug)
 
 # ============================================================
 # 4 — PAÍSES COM MAIS ATLETAS
@@ -134,52 +134,52 @@ ORDER BY Total_Atletas DESC;
 
 df_atletas = pd.read_sql(query_paises_atletas, conn)
 st.subheader("Países com maior número de atletas")
-bloco(lambda: st.dataframe(df_atletas, use_container_width=True, height=350), query_paises_atletas)
+bloco(lambda: st.dataframe(df_atletas, use_container_width=True, height=350, hide_index=True), query_paises_atletas)
 
 # ============================================================
 # 5 — ESPORTES COM MAIS PAÍSES
 # ============================================================
 query_esportes = """
-SELECT e.esporte, COUNT(DISTINCT a.sigla_pais) AS qtd_paises
+SELECT e.esporte as Esporte, COUNT(DISTINCT a.sigla_pais) AS Quantidade_Países
 FROM Evento e
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
-GROUP BY e.esporte
-ORDER BY qtd_paises DESC
+GROUP BY e.Esporte
+ORDER BY Quantidade_Países DESC
 LIMIT 10;
 """
 
 df_esportes = pd.read_sql(query_esportes, conn)
 st.subheader("Esportes com mais países competindo")
-bloco(lambda: st.dataframe(df_esportes, use_container_width=True, height=330), query_esportes)
+bloco(lambda: st.dataframe(df_esportes, use_container_width=True, height=330, hide_index=True), query_esportes)
 
 # ============================================================
 # 6 — MAIS MEDALHAS VS MÉDIA
 # ============================================================
 query_medalhas = """
-SELECT o.ano, p.nome AS pais, COUNT(c.medalha) AS total_medalhas
+SELECT o.ano as Ano, p.nome AS pais, COUNT(c.medalha) AS total_medalhas
 FROM Olimpiada o
-JOIN Evento e ON e.ano_olimpiada = o.ano
+JOIN Evento e ON e.ano_olimpiada = o.Ano
 JOIN Compete c ON c.id_evento = e.id_evento
 JOIN Atleta a ON a.id_atleta = c.id_atleta
 JOIN Pais p ON p.sigla = a.sigla_pais
 WHERE c.medalha IS NOT NULL
-GROUP BY o.ano, p.nome
-ORDER BY o.ano, total_medalhas DESC;
+GROUP BY o.Ano, p.nome 
+ORDER BY o.Ano, total_medalhas DESC;
 """
 
 df_all = pd.read_sql(query_medalhas, conn)
-df_max = df_all.groupby("ano").first().reset_index()
-df_media = df_all.groupby("ano")["total_medalhas"].mean().reset_index()
+df_max = df_all.groupby("Ano").first().reset_index()
+df_media = df_all.groupby("Ano")["total_medalhas"].mean().reset_index()
 df_media.rename(columns={"total_medalhas": "media_medalhas"}, inplace=True)
-df_join = df_max.merge(df_media, on="ano")
+df_join = df_max.merge(df_media, on="Ano")
 
 df_long = pd.melt(
     df_join,
-    id_vars=["ano", "pais"],
+    id_vars=["Ano", "pais"],
     value_vars=["total_medalhas", "media_medalhas"],
     var_name="tipo",
-    value_name="medalhas",
+    value_name="Medalhas",
 )
 
 def grafico_medalhas():
@@ -187,10 +187,10 @@ def grafico_medalhas():
         alt.Chart(df_long)
         .mark_line(point=True)
         .encode(
-            x=alt.X("ano:O", axis=alt.Axis(labelAngle=-45)),
-            y="medalhas:Q",
+            x=alt.X("Ano:O", axis=alt.Axis(labelAngle=-45)),
+            y="Medalhas:Q",
             color="tipo:N",
-            tooltip=["ano", "pais", "medalhas", "tipo"]
+            tooltip=["Ano", "pais", "Medalhas", "tipo"]
         )
     )
     st.altair_chart(chart, use_container_width=True)
