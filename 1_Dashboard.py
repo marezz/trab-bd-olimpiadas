@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ============================================================
-# CONFIGURAÇÃO E VARIÁVEL GLOBAL DO TOGGLE
+# CONFIGURAÇÃO DA PÁGINA E VARIÁVEL GLOBAL
 # ============================================================
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 
@@ -19,11 +19,18 @@ st.session_state.mostrar_sql = st.sidebar.toggle(
     value=st.session_state.mostrar_sql
 )
 
+# ============================================================
 # HEADER
-st.image("https://s2-valor.glbimg.com/KYxtrUqkoAYg5M6sotCjBtrzaTI=/0x0:960x540/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/x/J/9OkcpdT6qXCJOyRgElDg/primeiros-aneis-olimpicos.avif", width="stretch")
+# ============================================================
+st.image(
+    "https://s2-valor.glbimg.com/KYxtrUqkoAYg5M6sotCjBtrzaTI=/0x0:960x540/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/x/J/9OkcpdT6qXCJOyRgElDg/primeiros-aneis-olimpicos.avif",
+    width="stretch"
+)
 st.title("Bem vindo à nossa dashboard de Olimpíadas!")
 
-# DENSIDADE VISUAL REDUZIDA DAS TABELAS
+# ============================================================
+# ESTILIZAÇÃO DAS TABELAS
+# ============================================================
 st.markdown("""
 <style>
 [data-testid="stDataFrame"] table tbody tr { height: 18px; }
@@ -35,19 +42,17 @@ conn = get_connection()
 cur = conn.cursor()
 
 # ============================================================
-# LAYOUT ADAPTATIVO (GRAF/TABELA + SQL)
+# FUNÇÃO PARA LAYOUT ADAPTATIVO (CONTEÚDO + SQL)
 # ============================================================
-def bloco(conteudo, consulta=None):
-    mostrar = st.session_state.mostrar_sql
-
-    if mostrar and consulta:
+def bloco(conteudo_func, consulta_sql=None):
+    if st.session_state.mostrar_sql and consulta_sql:
         col1, col2 = st.columns([3, 2])
         with col1:
-            conteudo()
+            conteudo_func()
         with col2:
-            st.code(consulta, language="sql")
+            st.code(consulta_sql, language="sql")
     else:
-        conteudo()
+        conteudo_func()
 
 # ============================================================
 # 1 — RESUMO DO BANCO
@@ -68,10 +73,8 @@ JOIN Olimpiada o ON e.ano_olimpiada = o.ano;
 """
 
 df_resumo = pd.read_sql(query_resumo, conn)
-
 st.subheader("Resumo Geral do Banco")
-bloco(lambda: st.dataframe(df_resumo, use_container_width=True),
-      query_resumo)
+bloco(lambda: st.dataframe(df_resumo, use_container_width=True), query_resumo)
 
 # ============================================================
 # 2 — PAÍSES POR OLIMPÍADA
@@ -88,7 +91,6 @@ ORDER BY o.ano;
 
 df_paises = pd.read_sql(query_paises, conn)
 
-st.subheader("Maior quantidade de países por Olimpíada")
 def grafico_paises():
     chart = (
         alt.Chart(df_paises)
@@ -101,6 +103,7 @@ def grafico_paises():
     )
     st.altair_chart(chart, use_container_width=True)
 
+st.subheader("Maior quantidade de países por Olimpíada")
 bloco(grafico_paises, query_paises)
 
 # ============================================================
@@ -115,10 +118,8 @@ ORDER BY Ano_Inauguracao;
 """
 
 df_inaug = pd.read_sql(query_inaug, conn)
-
 st.subheader("Ano inaugural de cada esporte")
-bloco(lambda: st.dataframe(df_inaug, use_container_width=True, height=320),
-      query_inaug)
+bloco(lambda: st.dataframe(df_inaug, use_container_width=True, height=320), query_inaug)
 
 # ============================================================
 # 4 — PAÍSES COM MAIS ATLETAS
@@ -132,10 +133,8 @@ ORDER BY Total_Atletas DESC;
 """
 
 df_atletas = pd.read_sql(query_paises_atletas, conn)
-
 st.subheader("Países com maior número de atletas")
-bloco(lambda: st.dataframe(df_atletas, use_container_width=True, height=350),
-      query_paises_atletas)
+bloco(lambda: st.dataframe(df_atletas, use_container_width=True, height=350), query_paises_atletas)
 
 # ============================================================
 # 5 — ESPORTES COM MAIS PAÍSES
@@ -151,10 +150,8 @@ LIMIT 10;
 """
 
 df_esportes = pd.read_sql(query_esportes, conn)
-
 st.subheader("Esportes com mais países competindo")
-bloco(lambda: st.dataframe(df_esportes, use_container_width=True, height=330),
-      query_esportes)
+bloco(lambda: st.dataframe(df_esportes, use_container_width=True, height=330), query_esportes)
 
 # ============================================================
 # 6 — MAIS MEDALHAS VS MÉDIA
@@ -185,7 +182,6 @@ df_long = pd.melt(
     value_name="medalhas",
 )
 
-st.subheader("País com mais medalhas vs média")
 def grafico_medalhas():
     chart = (
         alt.Chart(df_long)
@@ -199,12 +195,12 @@ def grafico_medalhas():
     )
     st.altair_chart(chart, use_container_width=True)
 
+st.subheader("País com mais medalhas vs média")
 bloco(grafico_medalhas, query_medalhas)
 
 # ============================================================
 # 7 — PROPORÇÃO DE MEDALHAS POR PAÍS
 # ============================================================
-
 query_proporcao = """
 SELECT p.nome AS pais, c.medalha, COUNT(*) AS total
 FROM Compete c
@@ -233,10 +229,7 @@ def agrupar(df, min=10, max=10):
         df = pd.concat([df, padding], ignore_index=True)
     return df
 
-# medalhas
 medalhas = ["Ouro", "Prata", "Bronze"]
-
-# agrupar e criar coluna "medalha"
 df_list = []
 for m in medalhas:
     df_tmp = agrupar(df_med[df_med["medalha"] == m], 10, 10).copy()
@@ -244,30 +237,26 @@ for m in medalhas:
     df_list.append(df_tmp)
 
 df_plot = pd.concat(df_list, ignore_index=True)
-
-# definir cores consistentes
 paises_unicos = df_plot["pais"].unique()
 color_scale = alt.Scale(domain=paises_unicos.tolist(), scheme="category20")
 
-# gráfico combinado com facet por medalha
 chart = (
     alt.Chart(df_plot)
     .mark_arc()
     .encode(
         theta="total:Q",
         color=alt.Color("pais:N", scale=color_scale, legend=alt.Legend(title="País")),
-        column=alt.Column("medalha:N", header=alt.Header(labelAngle=0, title="Medalha")),
-        tooltip=["pais", "total"],
+        column=alt.Column("medalha:N", header=alt.Header(labelAngle=0, title="Medalha"), spacing=100),
+        tooltip=["pais", "total"]
     )
-    .properties(width=150, height=150)
+    .properties(width=250, height=250)
 )
 
-st.subheader("Proporção de medalhas por país (legenda compartilhada)")
-mostrar = st.session_state.get("mostrar_sql")
-if mostrar and query_proporcao:
+st.subheader("Proporção de medalhas por país")
+if st.session_state.mostrar_sql:
     st.code(query_proporcao, language="sql")
 
-st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart, use_container_width=False)
 
 cur.close()
 conn.close()

@@ -1,12 +1,38 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import altair as alt
 from db import get_connection
+from dotenv import load_dotenv
 
-st.set_page_config(page_title="Olimpíadas - Insights", layout="wide", page_icon="🏅")
+load_dotenv()
+
+st.set_page_config(page_title="Olimpíadas - Insights", layout="wide")
 st.title("Olimpíadas")
 
-# Conexão com o banco
+# ==================== SQL Toggle ====================
+if "mostrar_sql" not in st.session_state:
+    st.session_state.mostrar_sql = False
+
+st.session_state.mostrar_sql = st.sidebar.toggle(
+    "Mostrar consultas SQL",
+    value=st.session_state.mostrar_sql
+)
+
+mostrar_sql = st.session_state.mostrar_sql
+
+def bloco(titulo, conteudo, consulta=None):
+    st.subheader(titulo)
+    if mostrar_sql and consulta:
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            conteudo()
+        with col2:
+            st.code(consulta, language="sql")
+    else:
+        conteudo()
+
+# ==================== Conexão ====================
 conn = None
 try:
     conn = get_connection()
@@ -18,7 +44,7 @@ if conn is None:
     st.error("❌ Não foi possível conectar ao banco de dados.")
     st.stop()
 
-
+# ==================== Filtro Global ====================
 st.sidebar.header("Filtro Global")
 anos_df = pd.read_sql("SELECT DISTINCT ano FROM Olimpiada ORDER BY ano DESC", conn)
 anos = anos_df['ano'].tolist()
@@ -30,12 +56,10 @@ if not anos:
 ano_selecionado = st.sidebar.selectbox(
     "Selecione a edição da Olimpíada",
     options=anos,
-    index=0  
+    index=0
 )
 
-
-st.subheader(f"Proporção de medalhas por atleta — {ano_selecionado}")
-
+# ==================== Proporção de medalhas por atleta ====================
 q_prop_medalhas = """
 SELECT 
     A.nome AS Atleta,
@@ -49,13 +73,10 @@ GROUP BY A.id_atleta, A.nome
 ORDER BY Total_Medalhas DESC
 LIMIT 10;
 """
-
 df_prop_medalhas = pd.read_sql(q_prop_medalhas, conn, params=[ano_selecionado])
-st.dataframe(df_prop_medalhas, use_container_width=True)
+bloco("Proporção de medalhas por atleta", lambda: st.dataframe(df_prop_medalhas, use_container_width=True), q_prop_medalhas)
 
-
-st.subheader(f"Top 10 atletas mais vitoriosos — {ano_selecionado}")
-
+# ==================== Top 10 atletas mais vitoriosos ====================
 q_top_atletas = """
 SELECT 
     A.nome AS Atleta,
@@ -73,13 +94,10 @@ GROUP BY A.id_atleta, A.nome, P.nome
 ORDER BY Total_Medalhas DESC, Ouro DESC, Prata DESC
 LIMIT 10;
 """
-
 df_top_atletas = pd.read_sql(q_top_atletas, conn, params=[ano_selecionado])
-st.dataframe(df_top_atletas, use_container_width=True)
+bloco("Top 10 atletas mais vitoriosos", lambda: st.dataframe(df_top_atletas, use_container_width=True), q_top_atletas)
 
-
-st.subheader(f"Top 10 países com atletas mais pesados — {ano_selecionado}")
-
+# ==================== Top 10 países com atletas mais pesados ====================
 q_paises_mais_pesados = """
 SELECT 
     P.nome AS Pais,
@@ -91,17 +109,14 @@ JOIN Compete C ON A.id_atleta = C.id_atleta
 JOIN Evento E ON C.id_evento = E.id_evento
 WHERE E.ano_olimpiada = %s AND A.peso IS NOT NULL
 GROUP BY P.sigla, P.nome
-HAVING COUNT(*) >= 3  -- evitar países com poucos atletas (ex: 1 ou 2)
+HAVING COUNT(*) >= 3
 ORDER BY Peso_Medio DESC
 LIMIT 10;
 """
-
 df_paises_pesados = pd.read_sql(q_paises_mais_pesados, conn, params=[ano_selecionado])
-st.dataframe(df_paises_pesados, use_container_width=True)
+bloco("Top 10 países com atletas mais pesados", lambda: st.dataframe(df_paises_pesados, use_container_width=True), q_paises_mais_pesados)
 
-
-st.subheader(f"Atleta mais jovem e mais velho por sexo — {ano_selecionado}")
-
+# ==================== Atleta mais jovem e mais velho por sexo ====================
 q_idades_extremas = """
 WITH Ranked AS (
     SELECT 
@@ -125,12 +140,10 @@ FROM Ranked
 WHERE rn_jovem = 1 OR rn_velho = 1
 GROUP BY sexo;
 """
-
 df_idades_extremas = pd.read_sql(q_idades_extremas, conn, params=[ano_selecionado])
-st.dataframe(df_idades_extremas, use_container_width=True)
+bloco("Atleta mais jovem e mais velho por sexo", lambda: st.dataframe(df_idades_extremas, use_container_width=True), q_idades_extremas)
 
-st.subheader("Proporção de gênero por edição")
-
+# ==================== Proporção de gênero ====================
 q_genero = """
 SELECT 
     O.ano AS Ano,
@@ -144,35 +157,33 @@ WHERE A.sexo IN ('M', 'F')
 GROUP BY O.ano
 ORDER BY O.ano;
 """
-
 df_genero = pd.read_sql(q_genero, conn)
+def plot_genero():
+    if not df_genero.empty:
+        ano_row = df_genero[df_genero['Ano'] == ano_selecionado]
+        if not ano_row.empty:
+            df_pizza = pd.DataFrame({
+                'Sexo': ['Homens', 'Mulheres'],
+                'Quantidade': [int(ano_row['Homens'].iloc[0]), int(ano_row['Mulheres'].iloc[0])]
+            })
+            chart_pizza = alt.Chart(df_pizza).mark_arc(innerRadius=0).encode(
+                theta=alt.Theta(field="Quantidade", type="quantitative"),
+                color=alt.Color(field="Sexo", type="nominal", scale=alt.Scale(range=['#1f77b4', "#f065ba"])),
+                tooltip=["Sexo", "Quantidade"]
+            )
+            st.altair_chart(chart_pizza, use_container_width=True)
+        
+        df_genero['% Mulheres'] = (df_genero['Mulheres'] / (df_genero['Homens'] + df_genero['Mulheres']) * 100).round(1)
+        
+bloco("Proporção de gênero por edição", plot_genero, q_genero)
+chart_linha = alt.Chart(df_genero).mark_line(point=True, color="#f065ba").encode(
+        x=alt.X("Ano:O"),
+        y=alt.Y("% Mulheres:Q", title="% Mulheres"),
+        tooltip=["Ano", "% Mulheres"]
+    )
+st.altair_chart(chart_linha, use_container_width=True)  
 
-# Gráfico de pizza do ano selecionado
-if not df_genero.empty:
-    ano_row = df_genero[df_genero['Ano'] == ano_selecionado]
-    if not ano_row.empty:
-        homens = int(ano_row['Homens'].iloc[0])
-        mulheres = int(ano_row['Mulheres'].iloc[0])
-        labels = ['Homens', 'Mulheres']
-        sizes = [homens, mulheres]
-        colors = ['#1f77b4', '#ff7f0e']
-
-        fig, ax = plt.subplots()
-        ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors)
-        ax.axis('equal')  
-        st.pyplot(fig)
-    else:
-        st.warning(f"Dados de gênero não encontrados para {ano_selecionado}.")
-else:
-    st.warning("Nenhum dado de gênero encontrado.")
-
-st.write("Evolução da participação feminina (%):")
-df_genero['% Mulheres'] = (df_genero['Mulheres'] / (df_genero['Homens'] + df_genero['Mulheres']) * 100).round(1)
-st.line_chart(df_genero.set_index('Ano')['% Mulheres'])
-
-
-st.subheader("Número de países por edição (todas as Olimpíadas)")
-
+# ==================== Número de países por edição ====================
 q_paises_ano = """
 SELECT 
     O.ano AS Ano,
@@ -186,80 +197,5 @@ ORDER BY O.ano;
 """
 
 df_paises_ano = pd.read_sql(q_paises_ano, conn)
-st.bar_chart(df_paises_ano.set_index('Ano'))
-
-
-if not df_paises_ano.empty:
-    max_row = df_paises_ano.loc[df_paises_ano['Paises_Participantes'].idxmax()]
-    st.info(f"Recorde de diversidade: **{int(max_row['Paises_Participantes'])} países** em {int(max_row['Ano'])}.")
-
-st.subheader(f"Países sem medalhas — {ano_selecionado}")
-
-q_paises_sem_medalha_com_outer_join = """
-SELECT 
-    P.nome AS Pais
-FROM (
-    -- Países com pelo menos 1 atleta nesta edição
-    SELECT DISTINCT A.sigla_pais
-    FROM Atleta A
-    JOIN Compete C ON C.id_atleta = A.id_atleta
-    JOIN Evento E ON E.id_evento = C.id_evento
-    WHERE E.ano_olimpiada = %s
-      AND A.sigla_pais IS NOT NULL
-) AS Participantes
-JOIN Pais P ON P.sigla = Participantes.sigla_pais
-
-LEFT JOIN (
-    SELECT DISTINCT A.sigla_pais
-    FROM Atleta A
-    JOIN Compete C ON C.id_atleta = A.id_atleta
-    JOIN Evento E ON E.id_evento = C.id_evento
-    WHERE E.ano_olimpiada = %s
-      AND C.medalha IS NOT NULL
-      AND A.sigla_pais IS NOT NULL
-) AS Medalhistas
-ON Participantes.sigla_pais = Medalhistas.sigla_pais
-
-WHERE Medalhistas.sigla_pais IS NULL
-
-ORDER BY P.nome;
-"""
-
-try:
-    df_sem_medalha = pd.read_sql(
-        q_paises_sem_medalha_com_outer_join,
-        conn,
-        params=[ano_selecionado, ano_selecionado]
-    )
-    
-    if df_sem_medalha.empty:
-        st.success("Todos os países participantes conquistaram pelo menos uma medalha.")
-    else:
-        st.warning(f"{len(df_sem_medalha)} países participaram, mas não ganharam medalhas:")
-        st.dataframe(df_sem_medalha, use_container_width=True)
-except Exception as e:
-    st.error(f"Erro ao carregar países sem medalha: {e}")
-    st.code(q_paises_sem_medalha_com_outer_join)
-
-with st.expander("Outras análises (todas as edições)"):
-    
-    st.subheader("Top 5 edições com mais países")
-    st.dataframe(
-        df_paises_ano.sort_values('Paises_Participantes', ascending=False).head(5),
-        use_container_width=True
-    )
-
-    
-    st.subheader("Crescimento do número de eventos ao longo dos anos")
-    q_eventos = """
-    SELECT O.ano AS Ano, COUNT(E.id_evento) AS Total_Eventos
-    FROM Olimpiada O
-    LEFT JOIN Evento E ON E.ano_olimpiada = O.ano
-    GROUP BY O.ano
-    ORDER BY Ano;
-    """
-    df_eventos = pd.read_sql(q_eventos, conn)
-    st.line_chart(df_eventos.set_index("Ano"))
-
-st.sidebar.markdown("---")
-st.sidebar.info(f"Edição selecionada: **{ano_selecionado}**")
+bloco("Número de países por edição", lambda: st.dataframe(df_paises_ano, use_container_width=True), q_paises_ano)
+st.bar_chart(df_paises_ano.set_index('Ano'), sort='Paises_Participantes',)
