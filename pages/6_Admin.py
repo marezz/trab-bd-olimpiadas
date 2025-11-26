@@ -10,51 +10,51 @@ from db import get_connection
 load_dotenv()
 
 # Configuração da página
-st.set_page_config(page_title="CRUD Olimpíadas", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="CRUD Olimpíadas",  page_icon="⚙️")
 
 # Função para criar conexão com o banco
 @st.cache_resource
-def criar_conexao():
+def criar_conn():
     try:
-        conexao = mysql.connector.connect(
+        conn = mysql.connector.connect(
             host=os.getenv('DB_HOST', 'localhost'),
             user=os.getenv('DB_USER', 'root'),
             password=os.getenv('DB_PASSWORD', ''),
             database=os.getenv('DB_NAME', 'olimpiadas_db')
         )
-        return conexao
+        return conn
     except Error as e:
         st.error(f"Erro ao conectar ao MySQL: {e}")
         return None
 
 # ==================== FUNÇÕES CRUD - PAÍS ====================
-def inserir_pais(conexao, sigla, nome):
+def inserir_pais(conn, sigla, nome):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("INSERT INTO Pais (sigla, nome) VALUES (%s, %s)", (sigla, nome))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def atualizar_pais(conexao, sigla, novo_nome):
+def atualizar_pais(conn, sigla, novo_nome):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("UPDATE Pais SET nome = %s WHERE sigla = %s", (novo_nome, sigla))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def deletar_pais(conexao, sigla):
+def deletar_pais(conn, sigla):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM Pais WHERE sigla = %s", (sigla,))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
@@ -62,35 +62,35 @@ def deletar_pais(conexao, sigla):
         return False
 
 # ==================== FUNÇÕES CRUD - OLIMPÍADA ====================
-def inserir_olimpiada(conexao, ano, estacao, sede):
+def inserir_olimpiada(conn, ano, estacao, sede):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("INSERT INTO Olimpiada (ano, estacao, sede) VALUES (%s, %s, %s)", 
                       (ano, estacao, sede))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def atualizar_olimpiada(conexao, ano, estacao, sede):
+def atualizar_olimpiada(conn, ano, estacao, sede):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("UPDATE Olimpiada SET estacao = %s, sede = %s WHERE ano = %s", 
                       (estacao, sede, ano))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def deletar_olimpiada(conexao, ano):
+def deletar_olimpiada(conn, ano):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM Olimpiada WHERE ano = %s", (ano,))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
@@ -98,41 +98,41 @@ def deletar_olimpiada(conexao, ano):
         return False
 
 # ==================== FUNÇÕES CRUD - ATLETA ====================
-def inserir_atleta(conexao, nome, sexo, peso, altura, idade, sigla_pais):
+def inserir_atleta(conn, nome, sexo, peso, altura, idade, sigla_pais):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO Atleta (nome, sexo, peso, altura, idade, sigla_pais) 
                VALUES (%s, %s, %s, %s, %s, %s)""",
             (nome, sexo, peso, altura, idade, sigla_pais)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def atualizar_atleta(conexao, id_atleta, nome, sexo, peso, altura, idade, sigla_pais):
+def atualizar_atleta(conn, id_atleta, nome, sexo, peso, altura, idade, sigla_pais):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             """UPDATE Atleta SET nome = %s, sexo = %s, peso = %s, altura = %s, 
                idade = %s, sigla_pais = %s WHERE id_atleta = %s""",
             (nome, sexo, peso, altura, idade, sigla_pais, id_atleta)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def deletar_atleta(conexao, id_atleta):
+def deletar_atleta(conn, id_atleta):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM Atleta WHERE id_atleta = %s", (id_atleta,))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
@@ -140,41 +140,41 @@ def deletar_atleta(conexao, id_atleta):
         return False
 
 # ==================== FUNÇÕES CRUD - EVENTO ====================
-def inserir_evento(conexao, esporte, modalidade, ano_olimpiada):
+def inserir_evento(conn, esporte, modalidade, ano_olimpiada):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO Evento (esporte, modalidade, ano_olimpiada) 
                VALUES (%s, %s, %s)""",
             (esporte, modalidade, ano_olimpiada)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def atualizar_evento(conexao, id_evento, esporte, modalidade, ano_olimpiada):
+def atualizar_evento(conn, id_evento, esporte, modalidade, ano_olimpiada):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             """UPDATE Evento SET esporte = %s, modalidade = %s, ano_olimpiada = %s 
                WHERE id_evento = %s""",
             (esporte, modalidade, ano_olimpiada, id_evento)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def deletar_evento(conexao, id_evento):
+def deletar_evento(conn, id_evento):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM Evento WHERE id_evento = %s", (id_evento,))
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
@@ -182,42 +182,42 @@ def deletar_evento(conexao, id_evento):
         return False
 
 # ==================== FUNÇÕES CRUD - COMPETE ====================
-def inserir_compete(conexao, id_atleta, id_evento, medalha):
+def inserir_compete(conn, id_atleta, id_evento, medalha):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO Compete (id_atleta, id_evento, medalha) VALUES (%s, %s, %s)",
             (id_atleta, id_evento, medalha)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def atualizar_compete(conexao, id_atleta, id_evento, medalha):
+def atualizar_compete(conn, id_atleta, id_evento, medalha):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             "UPDATE Compete SET medalha = %s WHERE id_atleta = %s AND id_evento = %s",
             (medalha, id_atleta, id_evento)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
         st.error(f"Erro: {e}")
         return False
 
-def deletar_compete(conexao, id_atleta, id_evento):
+def deletar_compete(conn, id_atleta, id_evento):
     try:
-        cursor = conexao.cursor()
+        cursor = conn.cursor()
         cursor.execute(
             "DELETE FROM Compete WHERE id_atleta = %s AND id_evento = %s",
             (id_atleta, id_evento)
         )
-        conexao.commit()
+        conn.commit()
         cursor.close()
         return True
     except Error as e:
@@ -225,10 +225,10 @@ def deletar_compete(conexao, id_atleta, id_evento):
         return False
 
 # ==================== LEITURA ====================
-def ler_tabela(conexao, tabela):
+def ler_tabela(conn, tabela):
     try:
         query = f"SELECT * FROM {tabela}"
-        df = pd.read_sql(query, conexao)
+        df = pd.read_sql(query, conn)
         return df
     except Error as e:
         st.error(f"Erro ao ler dados: {e}")
@@ -239,9 +239,10 @@ def main():
     st.title("🏅 Sistema CRUD - Banco de Dados Olimpíadas")
     st.markdown("---")
     
-    conexao = criar_conexao()
+    conn = get_connection()
+    cur = conn.cursor()
     
-    if conexao and conexao.is_connected():
+    if conn and conn.is_connected():
         st.success("✅ Conectado ao MySQL - olimpiadas_db")
         
         # Sidebar
@@ -264,7 +265,7 @@ def main():
             st.header(f"🌍 Gerenciar: {tabela}")
             
             if operacao == "📋 Visualizar":
-                df = ler_tabela(conexao, "Pais")
+                df = ler_tabela(conn, "Pais")
                 st.dataframe(df, use_container_width=True)
                 st.info(f"Total de países: {len(df)}")
             
@@ -275,35 +276,35 @@ def main():
                     
                     if st.form_submit_button("💾 Salvar", type="primary"):
                         if sigla and nome:
-                            if inserir_pais(conexao, sigla, nome):
+                            if inserir_pais(conn, sigla, nome):
                                 st.success("✅ País inserido com sucesso!")
                                 st.balloons()
                         else:
                             st.warning("Preencha todos os campos!")
             
             elif operacao == "✏️ Atualizar":
-                df = ler_tabela(conexao, "Pais")
+                df = ler_tabela(conn, "Pais")
                 if not df.empty:
                     sigla = st.selectbox("Selecione o País (Sigla)", df['sigla'].tolist())
                     nome_atual = df[df['sigla'] == sigla]['nome'].values[0]
                     novo_nome = st.text_input("Novo Nome", value=nome_atual)
                     
                     if st.button("🔄 Atualizar", type="primary"):
-                        if atualizar_pais(conexao, sigla, novo_nome):
+                        if atualizar_pais(conn, sigla, novo_nome):
                             st.success("✅ País atualizado!")
                             st.rerun()
                 else:
                     st.warning("Nenhum país disponível.")
             
             elif operacao == "🗑️ Deletar":
-                df = ler_tabela(conexao, "Pais")
+                df = ler_tabela(conn, "Pais")
                 if not df.empty:
                     st.dataframe(df, use_container_width=True)
                     sigla = st.selectbox("Selecione o País para deletar", df['sigla'].tolist())
                     st.warning("⚠️ Esta ação não pode ser desfeita!")
                     
                     if st.button("Confirmar Exclusão", type="primary"):
-                        if deletar_pais(conexao, sigla):
+                        if deletar_pais(conn, sigla):
                             st.success("✅ País deletado!")
                             st.rerun()
                 else:
@@ -314,7 +315,7 @@ def main():
             st.header(f"🏆 Gerenciar: {tabela}")
             
             if operacao == "📋 Visualizar":
-                df = ler_tabela(conexao, "Olimpiada")
+                df = ler_tabela(conn, "Olimpiada")
                 st.dataframe(df, use_container_width=True)
                 st.info(f"Total de olimpíadas: {len(df)}")
             
@@ -326,14 +327,14 @@ def main():
                     
                     if st.form_submit_button("💾 Salvar", type="primary"):
                         if ano and sede:
-                            if inserir_olimpiada(conexao, ano, estacao, sede):
+                            if inserir_olimpiada(conn, ano, estacao, sede):
                                 st.success("✅ Olimpíada inserida!")
                                 st.balloons()
                         else:
                             st.warning("Preencha todos os campos!")
             
             elif operacao == "✏️ Atualizar":
-                df = ler_tabela(conexao, "Olimpiada")
+                df = ler_tabela(conn, "Olimpiada")
                 if not df.empty:
                     ano = st.selectbox("Selecione o Ano", df['ano'].tolist())
                     olimpiada_atual = df[df['ano'] == ano].iloc[0]
@@ -343,21 +344,21 @@ def main():
                     sede = st.text_input("Sede", value=olimpiada_atual['sede'])
                     
                     if st.button("🔄 Atualizar", type="primary"):
-                        if atualizar_olimpiada(conexao, ano, estacao, sede):
+                        if atualizar_olimpiada(conn, ano, estacao, sede):
                             st.success("✅ Olimpíada atualizada!")
                             st.rerun()
                 else:
                     st.warning("Nenhuma olimpíada disponível.")
             
             elif operacao == "🗑️ Deletar":
-                df = ler_tabela(conexao, "Olimpiada")
+                df = ler_tabela(conn, "Olimpiada")
                 if not df.empty:
                     st.dataframe(df, use_container_width=True)
                     ano = st.selectbox("Selecione o Ano", df['ano'].tolist())
                     st.warning("⚠️ Esta ação não pode ser desfeita!")
                     
                     if st.button("Confirmar Exclusão", type="primary"):
-                        if deletar_olimpiada(conexao, ano):
+                        if deletar_olimpiada(conn, ano):
                             st.success("✅ Olimpíada deletada!")
                             st.rerun()
                 else:
@@ -368,12 +369,12 @@ def main():
             st.header(f"🏃 Gerenciar: {tabela}")
             
             if operacao == "📋 Visualizar":
-                df = ler_tabela(conexao, "Atleta")
+                df = ler_tabela(conn, "Atleta")
                 st.dataframe(df, use_container_width=True)
                 st.info(f"Total de atletas: {len(df)}")
             
             elif operacao == "➕ Inserir":
-                paises_df = ler_tabela(conexao, "Pais")
+                paises_df = ler_tabela(conn, "Pais")
                 
                 if not paises_df.empty:
                     with st.form("form_atleta"):
@@ -389,7 +390,7 @@ def main():
                         
                         if st.form_submit_button("💾 Salvar", type="primary"):
                             if nome and sigla_pais:
-                                if inserir_atleta(conexao, nome, sexo, peso, altura, idade, sigla_pais):
+                                if inserir_atleta(conn, nome, sexo, peso, altura, idade, sigla_pais):
                                     st.success("✅ Atleta inserido!")
                                     st.balloons()
                             else:
@@ -398,8 +399,8 @@ def main():
                     st.warning("Cadastre países primeiro!")
             
             elif operacao == "✏️ Atualizar":
-                df = ler_tabela(conexao, "Atleta")
-                paises_df = ler_tabela(conexao, "Pais")
+                df = ler_tabela(conn, "Atleta")
+                paises_df = ler_tabela(conn, "Pais")
                 
                 if not df.empty and not paises_df.empty:
                     id_atleta = st.selectbox("Selecione o Atleta", 
@@ -419,14 +420,14 @@ def main():
                                                  index=paises_df['sigla'].tolist().index(atleta_atual['sigla_pais']))
                     
                     if st.button("🔄 Atualizar", type="primary"):
-                        if atualizar_atleta(conexao, id_atleta, nome, sexo, peso, altura, idade, sigla_pais):
+                        if atualizar_atleta(conn, id_atleta, nome, sexo, peso, altura, idade, sigla_pais):
                             st.success("✅ Atleta atualizado!")
                             st.rerun()
                 else:
                     st.warning("Nenhum atleta ou país disponível.")
             
             elif operacao == "🗑️ Deletar":
-                df = ler_tabela(conexao, "Atleta")
+                df = ler_tabela(conn, "Atleta")
                 if not df.empty:
                     st.dataframe(df, use_container_width=True)
                     id_atleta = st.selectbox("Selecione o Atleta", 
@@ -435,7 +436,7 @@ def main():
                     st.warning("⚠️ Esta ação não pode ser desfeita!")
                     
                     if st.button("Confirmar Exclusão", type="primary"):
-                        if deletar_atleta(conexao, id_atleta):
+                        if deletar_atleta(conn, id_atleta):
                             st.success("✅ Atleta deletado!")
                             st.rerun()
                 else:
@@ -446,12 +447,12 @@ def main():
             st.header(f"🎯 Gerenciar: {tabela}")
             
             if operacao == "📋 Visualizar":
-                df = ler_tabela(conexao, "Evento")
+                df = ler_tabela(conn, "Evento")
                 st.dataframe(df, use_container_width=True)
                 st.info(f"Total de eventos: {len(df)}")
             
             elif operacao == "➕ Inserir":
-                olimpiadas_df = ler_tabela(conexao, "Olimpiada")
+                olimpiadas_df = ler_tabela(conn, "Olimpiada")
                 
                 if not olimpiadas_df.empty:
                     with st.form("form_evento"):
@@ -461,7 +462,7 @@ def main():
                         
                         if st.form_submit_button("💾 Salvar", type="primary"):
                             if esporte and modalidade:
-                                if inserir_evento(conexao, esporte, modalidade, ano_olimpiada):
+                                if inserir_evento(conn, esporte, modalidade, ano_olimpiada):
                                     st.success("✅ Evento inserido!")
                                     st.balloons()
                             else:
@@ -470,8 +471,8 @@ def main():
                     st.warning("Cadastre olimpíadas primeiro!")
             
             elif operacao == "✏️ Atualizar":
-                df = ler_tabela(conexao, "Evento")
-                olimpiadas_df = ler_tabela(conexao, "Olimpiada")
+                df = ler_tabela(conn, "Evento")
+                olimpiadas_df = ler_tabela(conn, "Olimpiada")
                 
                 if not df.empty and not olimpiadas_df.empty:
                     id_evento = st.selectbox("Selecione o Evento", 
@@ -485,14 +486,14 @@ def main():
                                                 index=olimpiadas_df['ano'].tolist().index(evento_atual['ano_olimpiada']))
                     
                     if st.button("🔄 Atualizar", type="primary"):
-                        if atualizar_evento(conexao, id_evento, esporte, modalidade, ano_olimpiada):
+                        if atualizar_evento(conn, id_evento, esporte, modalidade, ano_olimpiada):
                             st.success("✅ Evento atualizado!")
                             st.rerun()
                 else:
                     st.warning("Nenhum evento ou olimpíada disponível.")
             
             elif operacao == "🗑️ Deletar":
-                df = ler_tabela(conexao, "Evento")
+                df = ler_tabela(conn, "Evento")
                 if not df.empty:
                     st.dataframe(df, use_container_width=True)
                     id_evento = st.selectbox("Selecione o Evento", 
@@ -501,7 +502,7 @@ def main():
                     st.warning("⚠️ Esta ação não pode ser desfeita!")
                     
                     if st.button("Confirmar Exclusão", type="primary"):
-                        if deletar_evento(conexao, id_evento):
+                        if deletar_evento(conn, id_evento):
                             st.success("✅ Evento deletado!")
                             st.rerun()
                 else:
@@ -520,13 +521,13 @@ def main():
                     JOIN Evento e ON c.id_evento = e.id_evento
                     LIMIT 100
                 """
-                df = pd.read_sql(query, conexao)
+                df = pd.read_sql(query, conn)
                 st.dataframe(df, use_container_width=True)
                 st.info(f"Mostrando até 100 competições")
             
             elif operacao == "➕ Inserir":
-                atletas_df = ler_tabela(conexao, "Atleta")
-                eventos_df = ler_tabela(conexao, "Evento")
+                atletas_df = ler_tabela(conn, "Atleta")
+                eventos_df = ler_tabela(conn, "Evento")
                 
                 if not atletas_df.empty and not eventos_df.empty:
                     with st.form("form_compete"):
@@ -539,7 +540,7 @@ def main():
                         medalha = st.selectbox("Medalha", ["Ouro", "Prata", "Bronze", "Sem Medalha"])
                         
                         if st.form_submit_button("💾 Salvar", type="primary"):
-                            if inserir_compete(conexao, id_atleta, id_evento, medalha):
+                            if inserir_compete(conn, id_atleta, id_evento, medalha):
                                 st.success("✅ Competição inserida!")
                                 st.balloons()
                 else:
@@ -553,7 +554,7 @@ def main():
                     JOIN Evento e ON c.id_evento = e.id_evento
                     LIMIT 100
                 """
-                df = pd.read_sql(query, conexao)
+                df = pd.read_sql(query, conn)
                 
                 if not df.empty:
                     opcoes = [f"Atleta ID {row['id_atleta']} ({row['nome']}) - Evento ID {row['id_evento']} ({row['esporte']})" 
@@ -565,7 +566,7 @@ def main():
                                           index=["Ouro", "Prata", "Bronze", "Sem Medalha"].index(registro['medalha']) if registro['medalha'] in ["Ouro", "Prata", "Bronze", "Sem Medalha"] else 3)
                     
                     if st.button("🔄 Atualizar", type="primary"):
-                        if atualizar_compete(conexao, registro['id_atleta'], registro['id_evento'], medalha):
+                        if atualizar_compete(conn, registro['id_atleta'], registro['id_evento'], medalha):
                             st.success("✅ Competição atualizada!")
                             st.rerun()
                 else:
@@ -579,7 +580,7 @@ def main():
                     JOIN Evento e ON c.id_evento = e.id_evento
                     LIMIT 100
                 """
-                df = pd.read_sql(query, conexao)
+                df = pd.read_sql(query, conn)
                 
                 if not df.empty:
                     st.dataframe(df, use_container_width=True)
@@ -591,7 +592,7 @@ def main():
                     st.warning("⚠️ Esta ação não pode ser desfeita!")
                     
                     if st.button("Confirmar Exclusão", type="primary"):
-                        if deletar_compete(conexao, registro['id_atleta'], registro['id_evento']):
+                        if deletar_compete(conn, registro['id_atleta'], registro['id_evento']):
                             st.success("✅ Competição deletada!")
                             st.rerun()
                 else:

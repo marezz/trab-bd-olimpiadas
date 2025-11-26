@@ -3,6 +3,7 @@ import pandas as pd
 import altair as alt
 from db import get_connection
 
+
 st.set_page_config(page_title="Análise de Eventos", page_icon="📅", layout="wide")
 st.title("Eventos")
 
