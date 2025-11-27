@@ -129,7 +129,8 @@ SELECT p.nome AS Pais, COUNT(*) AS Total_Atletas
 FROM Atleta a
 JOIN Pais p ON p.sigla = a.sigla_pais
 GROUP BY p.nome
-ORDER BY Total_Atletas DESC;
+ORDER BY Total_Atletas DESC
+LIMIT 20;
 """
 
 df_atletas = pd.read_sql(query_paises_atletas, conn)
