@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 from db import get_connection
+from dotenv import load_dotenv
+
+load_dotenv()
 
 st.set_page_config(page_title="Países - Olimpíadas", layout="wide", page_icon="🌍")
 st.title("Países")
