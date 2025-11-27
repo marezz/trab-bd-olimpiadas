@@ -103,7 +103,7 @@ def grafico_paises():
     )
     st.altair_chart(chart, use_container_width=True)
 
-st.subheader("Maior quantidade de países por Olimpíada")
+st.subheader("Número de países competidores de cada Olimpíada")
 bloco(grafico_paises, query_paises)
 
 # ============================================================

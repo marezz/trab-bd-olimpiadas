@@ -189,13 +189,13 @@ SELECT
     O.ano AS Ano,
     COUNT(DISTINCT A.sigla_pais) AS Paises_Participantes
 FROM Olimpiada O
-JOIN Evento E ON E.ano_olimpiada = O.ano
+JOIN Evento E ON E.ano_olimpiada = O.Ano
 JOIN Compete C ON C.id_evento = E.id_evento
 JOIN Atleta A ON A.id_atleta = C.id_atleta
-GROUP BY O.ano
-ORDER BY O.ano;
+GROUP BY O.Ano
+ORDER BY O.Ano;
 """
 
 df_paises_ano = pd.read_sql(q_paises_ano, conn)
 bloco("Número de países por edição", lambda: st.dataframe(df_paises_ano, use_container_width=True, hide_index=True), q_paises_ano)
-st.bar_chart(df_paises_ano.set_index('Ano'), sort='Paises_Participantes',)
+st.bar_chart(df_paises_ano.set_index('Ano'), sort='Paises_Participantes')
