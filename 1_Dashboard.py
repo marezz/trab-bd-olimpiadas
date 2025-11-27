@@ -22,10 +22,16 @@ st.session_state.mostrar_sql = st.sidebar.toggle(
 # ============================================================
 # HEADER
 # ============================================================
-st.image(
-    "https://s2-valor.glbimg.com/KYxtrUqkoAYg5M6sotCjBtrzaTI=/0x0:960x540/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/x/J/9OkcpdT6qXCJOyRgElDg/primeiros-aneis-olimpicos.avif",
-    width="stretch"
-)
+#ANTIGA ABAIXO NO COMENTÁRIO
+
+#"https://s2-valor.glbimg.com/KYxtrUqkoAYg5M6sotCjBtrzaTI=/0x0:960x540/600x0/smart/filters:gifv():strip_icc()/i.s3.glbimg.com/v1/AUTH_63b422c2caee4269b8b34177e8876b93/internal_photos/bs/2024/x/J/9OkcpdT6qXCJOyRgElDg/primeiros-aneis-olimpicos.avif"
+
+
+col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
+    st.image("Olympics-PNG-FREE.png", clamp=True)
+    
 st.title("Bem vindo à nossa dashboard de Olimpíadas!")
 
 # ============================================================
