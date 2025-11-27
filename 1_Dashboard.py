@@ -30,7 +30,7 @@ st.session_state.mostrar_sql = st.sidebar.toggle(
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
-    st.image("Olympics-PNG-FREE.png", clamp=True)
+    st.image("Olympics-PNG-FREE (1).png", clamp=True)
     
 st.title("Bem vindo à nossa dashboard de Olimpíadas!")
 
