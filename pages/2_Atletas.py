@@ -38,14 +38,14 @@ def carregar_atletas_db():
 def carregar_info_atleta(id_atleta):
     q = """
     SELECT 
-        A.nome,
-        A.sexo,
-        A.peso,
-        A.altura,
-        A.idade AS idade_atual,
-        P.nome AS pais,
-        COUNT(CASE WHEN C.medalha != 'Sem Medalha' THEN 1 END) AS medalhas,
-        COUNT(DISTINCT O.ano) AS participacoes
+        A.nome AS Nome,
+        A.sexo AS Sexo,
+        A.peso AS Peso,
+        A.altura As Altura,
+        A.idade AS Idade_Atual,
+        P.nome AS País,
+        COUNT(CASE WHEN C.medalha != 'Sem Medalha' THEN 1 END) AS Medalhas,
+        COUNT(DISTINCT O.ano) AS Participações
     FROM Atleta A
     JOIN Pais P ON P.sigla = A.sigla_pais
     JOIN Compete C ON C.id_atleta = A.id_atleta
@@ -141,7 +141,7 @@ df_primeira, q_part = participacao(atleta)
 # Função que mostra a tabela e as métricas
 def mostrar_info():
     # Tabela ocupando largura total
-    st.dataframe(df_info, width=1200)
+    st.dataframe(df_info, width=1200, hide_index=True)
     # Datas de primeira/última participação em formato de cards
     col1, col2 = st.columns(2)
     with col1:
@@ -179,7 +179,7 @@ bloco("Medalhas por modalidade", mostrar_modalidade, consulta=medalhas_por_modal
 # ===================== Desempenho por modalidades =====================
 def mostrar_desempenho():
     df_desempenho, q_desem = desempenho_modalidades(atleta)
-    st.dataframe(df_desempenho, width='stretch')
+    st.dataframe(df_desempenho, width='stretch', hide_index=True)
 
 bloco("Desempenho por modalidades", mostrar_desempenho, consulta=desempenho_modalidades(atleta)[1])
 
@@ -218,7 +218,7 @@ def mostrar_comparacao():
 
     grafico_comparacao(df_esporte, atleta, 'peso', 'Peso', 'kg')
     grafico_comparacao(df_esporte, atleta, 'altura', 'Altura', 'm')
-    st.dataframe(df_esporte, width='stretch')
+    st.dataframe(df_esporte, width='stretch', hide_index=True)
 
 bloco("Comparações com seu esporte", mostrar_comparacao, consulta=atletas_mesmo_esporte(atleta)[1])
 
